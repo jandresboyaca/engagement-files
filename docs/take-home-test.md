@@ -1,3 +1,7 @@
+---
+title: Take-Home Architecture Design Exercise
+---
+
 ## Take-Home Architecture Design Exercise
 
 ## Context

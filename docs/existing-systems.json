@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Current System — Components, Data Stores and Hook Points",
+    "output": "existing-systems.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "external": {
+          "label": "People"
+        },
+        "backend": {
+          "label": "Existing service"
+        },
+        "database": {
+          "label": "Existing data store"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "packageProcessor",
+      "type": "backend",
+      "label": "Zip Handling (assumed)",
+      "sublabel": "zip archive ↔ JSON",
+      "tag": "assumption · not in text",
+      "pos": [
+        380,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "contentTeams",
+      "type": "external",
+      "label": "Content Teams",
+      "sublabel": "one per market",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "templateService",
+      "type": "backend",
+      "label": "Template Storage System",
+      "sublabel": "publish · get(id, version)",
+      "tag": "hooks allowed",
+      "pos": [
+        380,
+        200
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "templateDb",
+      "type": "database",
+      "label": "Product Template DB",
+      "sublabel": "all versions · all firms",
+      "tag": "no engagement data",
+      "pos": [
+        740,
+        200
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "diffCapability",
+      "type": "backend",
+      "label": "Version Diff (given)",
+      "sublabel": "2 versions → JSON diff",
+      "tag": "given by case · how: open",
+      "pos": [
+        1090,
+        200
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "practitioner",
+      "type": "external",
+      "label": "Firm User",
+      "sublabel": "non-technical",
+      "pos": [
+        40,
+        400
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "engagementMgmt",
+      "type": "backend",
+      "label": "Engagement Mgmt System",
+      "sublabel": "create · load ~1 min · decide",
+      "tag": "hooks allowed",
+      "pos": [
+        380,
+        400
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "euDbs",
+      "type": "database",
+      "label": "EU Customer DBs",
+      "sublabel": "in-region required",
+      "pos": [
+        40,
+        590
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "caDbs",
+      "type": "database",
+      "label": "Canada Customer DBs",
+      "sublabel": "in-region required",
+      "pos": [
+        385,
+        590
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "otherDbs",
+      "type": "database",
+      "label": "Other Customer DBs",
+      "sublabel": "no residency rule stated",
+      "pos": [
+        740,
+        590
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Shared template platform — same content for all firms",
+      "wraps": [
+        "packageProcessor",
+        "templateService",
+        "templateDb",
+        "diffCapability"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Engagement platform — live, no maintenance window",
+      "wraps": [
+        "engagementMgmt"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "EU",
+      "wraps": [
+        "euDbs"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Canada",
+      "wraps": [
+        "caDbs"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Elsewhere",
+      "wraps": [
+        "otherDbs"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "publish",
+      "from": "contentTeams",
+      "to": "templateService",
+      "label": "publish · hook",
+      "variant": "emphasis"
+    },
+    {
+      "id": "unpack",
+      "from": "templateService",
+      "to": "packageProcessor",
+      "label": "zip ↔ JSON",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "write-read",
+      "from": "templateService",
+      "to": "templateDb",
+      "label": "write / read id+ver",
+      "variant": "emphasis"
+    },
+    {
+      "id": "diff-reads",
+      "from": "diffCapability",
+      "to": "templateDb",
+      "label": "read 2 versions",
+      "variant": "dashed"
+    },
+    {
+      "id": "open-decide",
+      "from": "practitioner",
+      "to": "engagementMgmt",
+      "label": "create · open · decide",
+      "variant": "emphasis"
+    },
+    {
+      "id": "get-template",
+      "from": "engagementMgmt",
+      "to": "templateService",
+      "label": "get latest on create",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "persist-eu",
+      "from": "engagementMgmt",
+      "to": "euDbs",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security"
+    },
+    {
+      "id": "persist-ca",
+      "from": "engagementMgmt",
+      "to": "caDbs",
+      "label": "store / read file",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security"
+    },
+    {
+      "id": "persist-other",
+      "from": "engagementMgmt",
+      "to": "otherDbs",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Readers and writers",
+      "items": [
+        "Template DB — writes: Template Storage System (content-team publish)",
+        "Template DB — reads: engagement creation, version diff",
+        "Customer DBs — reads and writes: Engagement Mgmt only",
+        "Nothing links templates to engagements today"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Hard facts",
+      "items": [
+        "Engagement keeps only its creation template id + version",
+        "Reading that requires a full load into a pod: ~1 min",
+        "Hooks/events may be added to any action of either system",
+        "Engagement content is client-confidential"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Marked as assumption",
+      "items": [
+        "Zip handling as a distinct step (text: templates are zips of JSON)",
+        "One database per customer (text: 'customer-specific databases')",
+        "Diff mechanism: given as available, internals unknown"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Loading an engagement (inside Engagement Mgmt)",
+      "items": [
+        "Runs in the session pods serving that session; ~1 min per file",
+        "The engagement is rebuilt in memory, not read: volatile financial fields are computed on load",
+        "So engagements cannot be queried in bulk",
+        "Pods are shared with live users: any background load competes with real sessions",
+        "This load is the slow, capacity-limited downstream of the Part 2 worker"
+      ]
+    }
+  ]
+}
