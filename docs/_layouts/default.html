@@ -26,7 +26,7 @@
       <nav class="site-nav" aria-label="Site">
         {% for item in site.nav %}
           {% assign item_path = item.url | url_decode %}
-          <a href="{{ item.url | relative_url }}" class="btn{% if page.url == item_path %} active{% endif %}"{% if page.url == item_path %} aria-current="page"{% endif %}>{{ item.title }}</a>
+          <a href="{{ item.url | relative_url }}" class="btn{% if page.url == item.url or page.url == item_path %} active{% endif %}"{% if page.url == item.url or page.url == item_path %} aria-current="page"{% endif %}>{{ item.title }}</a>
         {% endfor %}
       </nav>
       <h1 class="project-name">{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
