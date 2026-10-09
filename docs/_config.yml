@@ -1,3 +1,11 @@
 title: Engagement Files
 description: Architecture design for pending product-template updates on engagement files
 theme: jekyll-theme-cayman
+
+nav:
+  - title: Home
+    url: /
+  - title: Take-Home Test
+    url: /Staff_Java_Developer_-_Take-Home_Test%202.html
+  - title: Current System Diagram
+    url: /diagram.html
