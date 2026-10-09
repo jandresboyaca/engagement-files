@@ -48,9 +48,10 @@ Rationale: consistent, validated contracts keep clients and services decoupled a
 
 ## Technology & Architecture Constraints
 
-- Current stack: Java, Spring Boot, Spring Cloud, deployed on Google Cloud Platform (GCP).
+- Current stack: Java, Spring Boot, Spring Cloud, deployed on Amazon Web Services (AWS).
   This reflects the current decision and may evolve; any change MUST go through the amendment
-  process in Governance.
+  process in Governance. (Changed from GCP in v1.1.0: the take-home source states the company
+  is an AWS shop and the stack for this work is AWS.)
 - Architectural decisions MUST be recorded and MUST state which reference or scenario they rely
   on and the trade-offs considered. Citations MUST NOT be fabricated; cite only what was
   actually consulted.
@@ -87,4 +88,4 @@ PATCH for clarifications and wording fixes. Compliance MUST be checked in every 
 and architectural decisions MUST be reviewed against the Technology & Architecture
 Constraints section.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-08 | **Last Amended**: 2026-10-08
+**Version**: 1.1.0 | **Ratified**: 2026-10-08 | **Last Amended**: 2026-10-08
