@@ -11,7 +11,7 @@
 engagement files). Source of truth: that file only. Do not invent numbers or requirements; where
 the source is silent, mark it as an open question."
 
-**Source**: `.docs/Staff_Java_Developer_-_Take-Home_Test 2.md`. Each item cites it in brackets.
+**Source**: `docs/take-home-test.md`. Each item cites it in brackets.
 Source sections: Context (C), The Problem (P), Systems You Can Build On (S), Part 1 (Part 1),
 Part 2 (Part 2), Assumptions & Constraints (A), Time Expectation (T). Figures wrapped in «» in the
 source are recorded as given. This document says WHAT and WHY only.
