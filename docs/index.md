@@ -2,8 +2,6 @@
 title: Engagement Files
 ---
 
-# Engagement Files
-
 Architecture design exercise: surfacing pending product-template updates across engagement files.
 
 ## Documents
