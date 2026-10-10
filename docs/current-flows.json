@@ -1,0 +1,273 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Current System — Flows and Hook Points (as stated in the case)",
+    "output": "current-flows.html",
+    "viewBox": [
+      1080,
+      696
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "User / content action (hookable)"
+        },
+        "default": {
+          "label": "Internal call"
+        },
+        "return": {
+          "label": "Response"
+        },
+        "dashed": {
+          "label": "Not stated in the case"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "contentTeam",
+      "type": "external",
+      "label": "Content Team",
+      "sublabel": "per market"
+    },
+    {
+      "id": "templateSys",
+      "type": "backend",
+      "label": "Template Storage",
+      "sublabel": "existing system"
+    },
+    {
+      "id": "templateDb",
+      "type": "database",
+      "label": "Template DB",
+      "sublabel": "all versions, shared"
+    },
+    {
+      "id": "ems",
+      "type": "backend",
+      "label": "Engagement Mgmt",
+      "sublabel": "existing system"
+    },
+    {
+      "id": "customerDb",
+      "type": "database",
+      "label": "Customer DB",
+      "sublabel": "per customer, regional"
+    },
+    {
+      "id": "practitioner",
+      "type": "external",
+      "label": "Firm User",
+      "sublabel": "non-technical"
+    }
+  ],
+  "segments": [
+    {
+      "from": 172,
+      "to": 230,
+      "label": "1 · Publish template version"
+    },
+    {
+      "from": 236,
+      "to": 378,
+      "label": "2 · Create engagement"
+    },
+    {
+      "from": 384,
+      "to": 498,
+      "label": "3 · Open engagement (load)"
+    },
+    {
+      "from": 504,
+      "to": 562,
+      "label": "4 · Apply / decline decision"
+    }
+  ],
+  "messages": [
+    {
+      "id": "publish",
+      "from": "contentTeam",
+      "to": "templateSys",
+      "y": 194,
+      "label": "publish version (zip of JSON)",
+      "variant": "emphasis",
+      "note": "hook point"
+    },
+    {
+      "id": "write-version",
+      "from": "templateSys",
+      "to": "templateDb",
+      "y": 222,
+      "label": "write (id, version)"
+    },
+    {
+      "id": "create",
+      "from": "practitioner",
+      "to": "ems",
+      "y": 258,
+      "label": "create engagement",
+      "variant": "emphasis",
+      "note": "hook point"
+    },
+    {
+      "id": "get-template",
+      "from": "ems",
+      "to": "templateSys",
+      "y": 286,
+      "label": "get most recent version",
+      "note": "hook point"
+    },
+    {
+      "id": "read-template",
+      "from": "templateSys",
+      "to": "templateDb",
+      "y": 314,
+      "label": "read (id, version)"
+    },
+    {
+      "id": "template-back",
+      "from": "templateSys",
+      "to": "ems",
+      "y": 342,
+      "label": "template (zip of JSON)",
+      "variant": "return"
+    },
+    {
+      "id": "store-engagement",
+      "from": "ems",
+      "to": "customerDb",
+      "y": 370,
+      "label": "store file + creation id/version"
+    },
+    {
+      "id": "open",
+      "from": "practitioner",
+      "to": "ems",
+      "y": 406,
+      "label": "open engagement",
+      "variant": "emphasis",
+      "note": "hook point"
+    },
+    {
+      "id": "read-stored",
+      "from": "ems",
+      "to": "customerDb",
+      "y": 434,
+      "label": "read stored form"
+    },
+    {
+      "id": "stored-form",
+      "from": "customerDb",
+      "to": "ems",
+      "y": 462,
+      "label": "not queryable blob",
+      "variant": "return"
+    },
+    {
+      "id": "in-memory",
+      "from": "ems",
+      "to": "practitioner",
+      "y": 490,
+      "label": "loaded in session pods (~1 min)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "decide",
+      "from": "practitioner",
+      "to": "ems",
+      "y": 526,
+      "label": "apply / decline update",
+      "variant": "emphasis",
+      "note": "hook point"
+    },
+    {
+      "id": "persist-decision",
+      "from": "ems",
+      "to": "customerDb",
+      "y": 554,
+      "label": "persist outcome (shape unknown)",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "templateSys",
+      "from": 189,
+      "to": 228,
+      "type": "backend"
+    },
+    {
+      "participant": "templateSys",
+      "from": 281,
+      "to": 348,
+      "type": "backend"
+    },
+    {
+      "participant": "ems",
+      "from": 253,
+      "to": 376,
+      "type": "backend"
+    },
+    {
+      "participant": "ems",
+      "from": 401,
+      "to": 496,
+      "type": "backend"
+    },
+    {
+      "participant": "ems",
+      "from": 521,
+      "to": 560,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Hookable actions (any action of either system)",
+      "items": [
+        "Publish a template version",
+        "Read a template (on engagement creation)",
+        "Create an engagement",
+        "Open / load an engagement",
+        "Apply or decline a decision"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Stated hard facts",
+      "items": [
+        "Engagement stores only its creation template id + version",
+        "Stored form is not queryable: reading it costs a ~1 min load",
+        "Template DB holds no engagement information",
+        "All systems live, no maintenance window"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Not stated (dashed / open)",
+      "items": [
+        "What 'apply/decline' persists, and whether it updates the stored version",
+        "Whether creation reads the DB directly or through the service",
+        "Whether a bulk load is side-effect free"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Loading an engagement (inside Engagement Mgmt)",
+      "items": [
+        "Runs in the session pods serving that session; ~1 min per file",
+        "The engagement is rebuilt in memory, not read: volatile financial fields are computed on load",
+        "So engagements cannot be queried in bulk",
+        "Pods are shared with live users: any background load competes with real sessions",
+        "This load is the slow, capacity-limited downstream of the Part 2 worker"
+      ]
+    }
+  ]
+}
