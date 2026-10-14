@@ -12,6 +12,7 @@ Architecture design exercise: surfacing pending product-template updates across 
 
 ## To-be design
 
+- [Design](design.html): the design document. Architecture and data ownership, correctness, scale and cost, summaries, trade-offs
 - [To-Be Components](to-be-components.html): new components, who produces and consumes each event, who owns the data (interactive)
 - [To-Be Flows](to-be-sequence.html): publish and summaries, firm activation, reconcile on load, decision (interactive)
 - [Fan-out Worker](fan-out.html): one mechanism reused by three triggers, and how the one-minute load is handled (interactive)

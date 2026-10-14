@@ -5,19 +5,25 @@ theme: jekyll-theme-cayman
 nav:
   - title: Home
     url: /
-  - title: Take-Home Test
+  - title: Problem
     url: /Staff_Java_Developer_-_Take-Home_Test%202.html
-  - title: Current System Diagram
-    url: /diagram.html
-  - title: Current Flows
-    url: /flows.html
-  - title: To-Be Components
-    url: /to-be-components.html
-  - title: To-Be Flows
-    url: /to-be-sequence.html
-  - title: Fan-out Worker
-    url: /fan-out.html
-  - title: Data Model
-    url: /to-be-data.html
-  - title: Event Delivery (LLD)
-    url: /event-delivery-lld.html
+  - title: Current system
+    items:
+      - title: Components
+        url: /diagram.html
+      - title: Flows
+        url: /flows.html
+  - title: To-be design
+    items:
+      - title: Design
+        url: /design.html
+      - title: Components
+        url: /to-be-components.html
+      - title: Flows
+        url: /to-be-sequence.html
+      - title: Fan-out worker
+        url: /fan-out.html
+      - title: Data model
+        url: /to-be-data.html
+      - title: Event delivery (LLD)
+        url: /event-delivery-lld.html
