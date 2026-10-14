@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "To-Be · Flows",
+    "output": "to-be-flows.html",
+    "viewBox": [
+      1080,
+      696
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "NEW event published by an existing system"
+        },
+        "default": {
+          "label": "Call"
+        },
+        "return": {
+          "label": "Response"
+        },
+        "dashed": {
+          "label": "Background load by the worker"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "tplSys",
+      "type": "backend",
+      "label": "Template Storage",
+      "sublabel": "existing · incl. Version Diff"
+    },
+    {
+      "id": "summary",
+      "type": "frontend",
+      "label": "Summary Service",
+      "sublabel": "new · global"
+    },
+    {
+      "id": "core",
+      "type": "frontend",
+      "label": "Regional Service",
+      "sublabel": "Reconciler + Query API"
+    },
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Firm User",
+      "sublabel": "non-technical"
+    },
+    {
+      "id": "ems",
+      "type": "backend",
+      "label": "Engagement Mgmt",
+      "sublabel": "existing + new events"
+    },
+    {
+      "id": "worker",
+      "type": "frontend",
+      "label": "Fan-out Worker",
+      "sublabel": "new · per region"
+    }
+  ],
+  "segments": [
+    {
+      "from": 172,
+      "to": 370,
+      "label": "1 · Publish → summaries prepared → pending in seconds (no loads)"
+    },
+    {
+      "from": 376,
+      "to": 434,
+      "label": "2 · Activate a firm (one-time backfill)"
+    },
+    {
+      "from": 440,
+      "to": 498,
+      "label": "3 · User opens an engagement (reconcile)"
+    },
+    {
+      "from": 504,
+      "to": 562,
+      "label": "4 · Apply / decline"
+    }
+  ],
+  "messages": [
+    {
+      "id": "published",
+      "from": "tplSys",
+      "to": "summary",
+      "y": 194,
+      "label": "TemplatePublished",
+      "variant": "emphasis"
+    },
+    {
+      "id": "published-region",
+      "from": "tplSys",
+      "to": "core",
+      "y": 222,
+      "label": "TemplatePublished → copy of versions",
+      "variant": "emphasis"
+    },
+    {
+      "id": "diff",
+      "from": "summary",
+      "to": "tplSys",
+      "y": 250,
+      "label": "JSON diff parent → new"
+    },
+    {
+      "id": "need-summary",
+      "from": "core",
+      "to": "summary",
+      "y": 278,
+      "label": "summaries for v3, v5, v6 → v7"
+    },
+    {
+      "id": "summary-back",
+      "from": "summary",
+      "to": "core",
+      "y": 306,
+      "label": "summaries + ids",
+      "variant": "return"
+    },
+    {
+      "id": "query",
+      "from": "ems",
+      "to": "core",
+      "y": 334,
+      "label": "user lists engagements → pending?"
+    },
+    {
+      "id": "pending",
+      "from": "core",
+      "to": "ems",
+      "y": 362,
+      "label": "pending flag + summary",
+      "variant": "return"
+    },
+    {
+      "id": "request-load",
+      "from": "worker",
+      "to": "ems",
+      "y": 398,
+      "label": "load (quota per firm)",
+      "variant": "dashed"
+    },
+    {
+      "id": "loaded-bf",
+      "from": "ems",
+      "to": "core",
+      "y": 426,
+      "label": "EngagementLoaded {T, version}",
+      "variant": "emphasis"
+    },
+    {
+      "id": "open",
+      "from": "user",
+      "to": "ems",
+      "y": 462,
+      "label": "open (~1 min)"
+    },
+    {
+      "id": "loaded",
+      "from": "ems",
+      "to": "core",
+      "y": 490,
+      "label": "EngagementLoaded → compare, fix",
+      "variant": "emphasis"
+    },
+    {
+      "id": "decide",
+      "from": "user",
+      "to": "ems",
+      "y": 526,
+      "label": "apply / decline"
+    },
+    {
+      "id": "decided",
+      "from": "ems",
+      "to": "core",
+      "y": 554,
+      "label": "UpdateDecided {summary id, user}",
+      "variant": "emphasis"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "summary",
+      "from": 189,
+      "to": 312,
+      "type": "frontend"
+    },
+    {
+      "participant": "core",
+      "from": 217,
+      "to": 368,
+      "type": "frontend"
+    },
+    {
+      "participant": "ems",
+      "from": 393,
+      "to": 432,
+      "type": "backend"
+    },
+    {
+      "participant": "ems",
+      "from": 457,
+      "to": 496,
+      "type": "backend"
+    },
+    {
+      "participant": "ems",
+      "from": 521,
+      "to": 560,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "1 · Publish and summary",
+      "items": [
+        "Template Storage publishes TemplatePublished; the same event goes to two consumers",
+        "Summary Service: generates the parent → new summary right away, from the JSON diff given by Version Diff",
+        "Each region: the Reconciler updates its copy of the versions (lineage) and adds work for the worker",
+        "Then the Reconciler asks the Summary Service for one summary per version in use in its region (here v3, v5 and v6 → v7): a few calls, not one per engagement. The request carries no firm data. A summary still missing later is fetched on demand",
+        "There is no Version Catalog service: lineage is owned by Template Storage and reaches us only through the event",
+        "When the user lists engagements everything is already in the region: pending = engagement version × copy of versions, and the summary is read from the regional copy. No engagement is loaded on this path"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "2 · Activate a firm",
+      "items": [
+        "The worker asks Engagement Mgmt to load each engagement of the firm",
+        "The worker never writes the index: the Reconciler does, when it receives EngagementLoaded. It is the same path as flow 3",
+        "The feature is switched on only when every engagement of the firm is indexed",
+        "The saga log lets the job resume after a crash without repeating loads"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "3 · Reconcile on load",
+      "items": [
+        "The user already pays the 1-minute load; the check is free",
+        "Match: only 'last verified' is updated",
+        "Mismatch: a 'Reconciled' event is appended and a divergence metric is raised"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "4 · Decision and audit",
+      "items": [
+        "Engagement Mgmt stays the owner of the decision's effect",
+        "The event carries the id of the exact summary shown, the user and the time",
+        "Appended to the immutable event stream: this is the record defended in a review"
+      ]
+    }
+  ]
+}

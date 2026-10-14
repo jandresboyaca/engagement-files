@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "To-Be · Fan-out worker — one mechanism, reused by three triggers",
+    "output": "fanout-worker.html",
+    "viewBox": [
+      1080,
+      696
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "emphasis": {
+          "label": "Event"
+        },
+        "default": {
+          "label": "Call"
+        },
+        "return": {
+          "label": "Response"
+        },
+        "dashed": {
+          "label": "Load requested by the worker (~1 min)"
+        }
+      }
+    }
+  },
+  "participants": [
+    {
+      "id": "trigger",
+      "type": "external",
+      "label": "Trigger",
+      "sublabel": "activation · publish · sweep"
+    },
+    {
+      "id": "db",
+      "type": "security",
+      "label": "Pending Updates DB",
+      "sublabel": "work list + index"
+    },
+    {
+      "id": "reconciler",
+      "type": "frontend",
+      "label": "Reconciler",
+      "sublabel": "new · per region"
+    },
+    {
+      "id": "worker",
+      "type": "frontend",
+      "label": "Fan-out Worker",
+      "sublabel": "new · Part 2"
+    },
+    {
+      "id": "ems",
+      "type": "backend",
+      "label": "Engagement Mgmt",
+      "sublabel": "existing"
+    },
+    {
+      "id": "user",
+      "type": "external",
+      "label": "Firm User",
+      "sublabel": "non-technical"
+    }
+  ],
+  "segments": [
+    {
+      "from": 172,
+      "to": 220,
+      "label": "1 · Work is added (three triggers, one list)"
+    },
+    {
+      "from": 232,
+      "to": 402,
+      "label": "2 · Worker loop — happy path"
+    },
+    {
+      "from": 408,
+      "to": 494,
+      "label": "3 · Load fails"
+    },
+    {
+      "from": 500,
+      "to": 586,
+      "label": "4 · Reuse: a normal user load takes the same way back"
+    }
+  ],
+  "messages": [
+    {
+      "id": "add",
+      "from": "trigger",
+      "to": "db",
+      "y": 202,
+      "label": "add work items"
+    },
+    {
+      "id": "take",
+      "from": "worker",
+      "to": "db",
+      "y": 254,
+      "label": "take next · fair across firms"
+    },
+    {
+      "id": "item",
+      "from": "db",
+      "to": "worker",
+      "y": 282,
+      "label": "item: engagement + firm",
+      "variant": "return"
+    },
+    {
+      "id": "request",
+      "from": "worker",
+      "to": "ems",
+      "y": 310,
+      "label": "load (if slot free)",
+      "variant": "dashed"
+    },
+    {
+      "id": "loaded",
+      "from": "ems",
+      "to": "reconciler",
+      "y": 338,
+      "label": "EngagementLoaded {template, version}",
+      "variant": "emphasis"
+    },
+    {
+      "id": "index",
+      "from": "reconciler",
+      "to": "db",
+      "y": 366,
+      "label": "index · item done"
+    },
+    {
+      "id": "record",
+      "from": "worker",
+      "to": "db",
+      "y": 394,
+      "label": "record result (saga log)"
+    },
+    {
+      "id": "request2",
+      "from": "worker",
+      "to": "ems",
+      "y": 430,
+      "label": "load (if slot free)",
+      "variant": "dashed"
+    },
+    {
+      "id": "fail",
+      "from": "ems",
+      "to": "worker",
+      "y": 458,
+      "label": "error · timeout",
+      "variant": "return"
+    },
+    {
+      "id": "retry",
+      "from": "worker",
+      "to": "db",
+      "y": 486,
+      "label": "attempts + 1 · retry later"
+    },
+    {
+      "id": "open",
+      "from": "user",
+      "to": "ems",
+      "y": 522,
+      "label": "open (~1 min)"
+    },
+    {
+      "id": "loaded2",
+      "from": "ems",
+      "to": "reconciler",
+      "y": 550,
+      "label": "EngagementLoaded {template, version}",
+      "variant": "emphasis"
+    },
+    {
+      "id": "index2",
+      "from": "reconciler",
+      "to": "db",
+      "y": 578,
+      "label": "index · item done"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "worker",
+      "from": 249,
+      "to": 400,
+      "type": "frontend"
+    },
+    {
+      "participant": "ems",
+      "from": 305,
+      "to": 344,
+      "type": "backend"
+    },
+    {
+      "participant": "worker",
+      "from": 425,
+      "to": 492,
+      "type": "frontend"
+    },
+    {
+      "participant": "ems",
+      "from": 517,
+      "to": 556,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "What is reused",
+      "items": [
+        "One work list and one loop for three reasons: firm activation, a new publish, the background sweep",
+        "One way back: load → EngagementLoaded → Reconciler → index. It is the same path a normal user load already uses",
+        "The worker never writes the index",
+        "A user who opens an engagement indexes it for free: that item leaves the work list without costing the worker a minute",
+        "When every engagement of a firm is indexed, the Reconciler switches the feature on for that firm (firm_activation)"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "How the one-minute load is handled",
+      "items": [
+        "The minute cannot be removed: it is a hard constraint",
+        "It is kept off the user-facing path: 'pending' is computed from the index, so a publish shows up in seconds without loading anything",
+        "It is paid once per engagement: after indexing, later publishes do not load it again",
+        "It is paid in parallel, within limits: 800,000 minutes at ~19 concurrent loads is 30 days",
+        "The limit belongs to the team that owns the pods and can be changed at runtime"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "What the worker must get right (Part 2)",
+      "items": [
+        "Concurrency: a global cap on loads in flight, never above what the other team allows",
+        "Fairness: a cap per firm, so the 40,000-engagement firm cannot starve the 40-engagement ones",
+        "Failure: timeout per load, retry with backoff, park the item after N attempts, resume from the saga log after a crash",
+        "Idempotency: an item already indexed or already in flight is skipped"
+      ]
+    }
+  ]
+}

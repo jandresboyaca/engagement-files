@@ -1,0 +1,588 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "To-Be · Components",
+    "output": "to-be-architecture.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "legend": {
+      "mode": "auto",
+      "entries": {
+        "external": {
+          "label": "People"
+        },
+        "backend": {
+          "label": "EXISTING service"
+        },
+        "database": {
+          "label": "EXISTING database"
+        },
+        "messagebus": {
+          "label": "NEW: event transport"
+        },
+        "frontend": {
+          "label": "NEW service (ours)"
+        },
+        "security": {
+          "label": "NEW database (ours)"
+        }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "zipHandling",
+      "type": "backend",
+      "label": "Zip Handling (assumed)",
+      "sublabel": "zip archive ↔ JSON",
+      "pos": [
+        350,
+        40
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "contentTeams",
+      "type": "external",
+      "label": "Content Teams",
+      "sublabel": "one per market",
+      "pos": [
+        40,
+        200
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "templateService",
+      "type": "backend",
+      "label": "Template Storage System",
+      "sublabel": "+ hooks: published · withdrawn",
+      "pos": [
+        350,
+        200
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "templateDb",
+      "type": "database",
+      "label": "Product Template DB",
+      "sublabel": "all versions · + outbox (added)",
+      "pos": [
+        680,
+        200
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "versionDiff",
+      "type": "backend",
+      "label": "Version Diff (given)",
+      "sublabel": "2 versions → JSON diff",
+      "pos": [
+        990,
+        200
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "summaryService",
+      "type": "frontend",
+      "label": "Summary Service",
+      "sublabel": "once per version transition",
+      "pos": [
+        990,
+        360
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "icon": "backend"
+    },
+    {
+      "id": "summaryStore",
+      "type": "security",
+      "label": "Summaries DB",
+      "sublabel": "generic · immutable · provenance",
+      "pos": [
+        680,
+        520
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "icon": "database"
+    },
+    {
+      "id": "worker",
+      "type": "frontend",
+      "label": "Fan-out Worker (Part 2)",
+      "sublabel": "saga log · quota per firm",
+      "pos": [
+        990,
+        1070
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "icon": "backend"
+    },
+    {
+      "id": "firmUser",
+      "type": "external",
+      "label": "Firm User",
+      "sublabel": "non-technical",
+      "pos": [
+        40,
+        880
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "engagementMgmt",
+      "type": "backend",
+      "label": "Engagement Mgmt System",
+      "sublabel": "+ hooks: create · load · decide",
+      "pos": [
+        350,
+        880
+      ],
+      "size": [
+        190,
+        64
+      ]
+    },
+    {
+      "id": "queryApi",
+      "type": "frontend",
+      "label": "Query API",
+      "sublabel": "pending flag + summary",
+      "pos": [
+        680,
+        880
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "icon": "backend"
+    },
+    {
+      "id": "euDbs",
+      "type": "database",
+      "label": "EU Customer DBs",
+      "sublabel": "in-region · + outbox (added)",
+      "pos": [
+        40,
+        1070
+      ],
+      "size": [
+        170,
+        64
+      ]
+    },
+    {
+      "id": "caDbs",
+      "type": "database",
+      "label": "Canada Customer DBs",
+      "sublabel": "in-region · + outbox (added)",
+      "pos": [
+        355,
+        1070
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "otherDbs",
+      "type": "database",
+      "label": "Other Customer DBs",
+      "sublabel": "+ outbox table (added)",
+      "pos": [
+        680,
+        1070
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "bus",
+      "type": "messagebus",
+      "label": "Event Broker",
+      "sublabel": "at-least-once · with DLQ",
+      "pos": [
+        680,
+        720
+      ],
+      "size": [
+        180,
+        64
+      ]
+    },
+    {
+      "id": "reconciler",
+      "type": "frontend",
+      "label": "Reconciler",
+      "sublabel": "idempotent · dedupe by id",
+      "pos": [
+        990,
+        720
+      ],
+      "size": [
+        180,
+        64
+      ],
+      "icon": "backend"
+    },
+    {
+      "id": "regionalDb",
+      "type": "security",
+      "icon": "database",
+      "label": "Pending Updates DB",
+      "sublabel": "index · audit trail · caches",
+      "pos": [
+        990,
+        880
+      ],
+      "size": [
+        180,
+        64
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "GLOBAL zone — template content only, no firm data",
+      "wraps": [
+        "zipHandling",
+        "templateService",
+        "templateDb",
+        "versionDiff",
+        "summaryService",
+        "summaryStore"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "REGIONAL zone — one full deployment per region; firm data never leaves",
+      "wraps": [
+        "worker",
+        "engagementMgmt",
+        "queryApi",
+        "euDbs",
+        "caDbs",
+        "otherDbs",
+        "bus",
+        "reconciler",
+        "regionalDb",
+        "firmUser"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "EU",
+      "wraps": [
+        "euDbs"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Canada",
+      "wraps": [
+        "caDbs"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "Elsewhere",
+      "wraps": [
+        "otherDbs"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "publish",
+      "from": "contentTeams",
+      "to": "templateService",
+      "label": "publish / withdraw"
+    },
+    {
+      "id": "unpack",
+      "from": "templateService",
+      "to": "zipHandling",
+      "label": "zip ↔ JSON",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "write-read",
+      "from": "templateService",
+      "to": "templateDb",
+      "label": "write / read"
+    },
+    {
+      "id": "diff-reads",
+      "from": "versionDiff",
+      "to": "templateDb",
+      "label": "read 2 versions",
+      "variant": "dashed"
+    },
+    {
+      "id": "open-decide",
+      "from": "firmUser",
+      "to": "engagementMgmt",
+      "label": "create·open·decide"
+    },
+    {
+      "id": "get-template",
+      "from": "engagementMgmt",
+      "to": "templateService",
+      "label": "get latest on create",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "persist-eu",
+      "from": "engagementMgmt",
+      "to": "euDbs",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security"
+    },
+    {
+      "id": "persist-ca",
+      "from": "engagementMgmt",
+      "to": "caDbs",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security"
+    },
+    {
+      "id": "persist-other",
+      "from": "engagementMgmt",
+      "to": "otherDbs",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "variant": "security",
+      "label": "store / read file"
+    },
+    {
+      "id": "get-diff",
+      "from": "summaryService",
+      "to": "versionDiff",
+      "label": "get JSON diff",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ui-query",
+      "from": "engagementMgmt",
+      "to": "queryApi",
+      "label": "pending + summary"
+    },
+    {
+      "id": "ev-summary",
+      "from": "templateService",
+      "to": "summaryService",
+      "label": "TemplatePublished",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "read-db",
+      "from": "queryApi",
+      "to": "regionalDb",
+      "label": "read"
+    },
+    {
+      "id": "summary-store",
+      "from": "summaryService",
+      "to": "summaryStore",
+      "label": "store",
+      "fromSide": "bottom",
+      "toSide": "right"
+    },
+    {
+      "id": "get-summary",
+      "from": "reconciler",
+      "to": "summaryService",
+      "label": "get summary · no firm data",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "ev-region",
+      "from": "templateService",
+      "to": "reconciler",
+      "label": "TemplatePublished · TemplateWithdrawn",
+      "variant": "emphasis",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "write-db",
+      "from": "reconciler",
+      "to": "regionalDb",
+      "label": "append · update",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "ev-ems",
+      "from": "engagementMgmt",
+      "to": "bus",
+      "label": "EngagementCreated · EngagementLoaded · UpdateDecided",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "consume",
+      "from": "bus",
+      "to": "reconciler",
+      "label": "deliver",
+      "variant": "emphasis"
+    },
+    {
+      "id": "worker-db",
+      "from": "worker",
+      "to": "regionalDb",
+      "label": "work list · saga log",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "request-load",
+      "from": "worker",
+      "to": "engagementMgmt",
+      "label": "request load ~1 min",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "left"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "The 5 events we ask the existing systems to publish",
+      "items": [
+        "The contract is the event. How each system emits it is its own implementation; we only require that no event is lost (we recommend an outbox, see the data-flow view)",
+        "Template Storage · TemplatePublished {template id, version, parent version, market, time}",
+        "Template Storage · TemplateWithdrawn {template id, version, time, reason}",
+        "Engagement Mgmt · EngagementCreated {engagement, firm, template id, version}",
+        "Engagement Mgmt · EngagementLoaded {engagement, firm, template id, current version}",
+        "Engagement Mgmt · UpdateDecided {engagement, version, apply/decline, summary id, user, time}",
+        "All are fat events in a CloudEvents envelope: metadata only, event id and per-emitter sequence",
+        "A market branch needs no extra event: it is a TemplatePublished whose parent is not the latest version"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What we change in the existing systems",
+      "items": [
+        "Template Storage System: publishes 2 new events (TemplatePublished, TemplateWithdrawn)",
+        "Template Storage System: its events carry version, parent and market, and it provides a one-time listing of the lineage of versions already published",
+        "Engagement Mgmt System: publishes 3 new events (EngagementCreated, EngagementLoaded, UpdateDecided)",
+        "Recommended, so that no event is lost: an outbox table in the Product Template DB and in each customer database, with a relay per database that publishes rows until acknowledged",
+        "Engagement Mgmt System: its existing UI calls our Query API to show the pending indicator and the summary",
+        "Untouched: engagement storage format, the ~1 min load path, engagement creation flow"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Data ownership",
+      "items": [
+        "Template versions and their lineage (parent, market, withdrawn): Template Storage (existing). How it stores lineage is its own decision",
+        "Generic summary of a version transition: Summary Service, stored in the Summaries DB (new, global, one instance)",
+        "Engagement and the effect of apply/decline: Engagement Mgmt (existing)",
+        "Current template version per engagement and the audit trail: Pending Updates DB (new, one per region)",
+        "Inside the Pending Updates DB the engagement events are the source of truth; the index, the copy of template versions and the copy of summaries are derived and can be rebuilt. Tables are in the data-model view",
+        "The two new databases are not connected to each other. When a TemplatePublished arrives, the Reconciler asks the Summary Service for one summary per version in use in its region (template and versions only, no firm data) and keeps a copy"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Event contract",
+      "items": [
+        "This view shows the producer of each event. How an event physically travels (outbox → relay → broker → consumer → dead-letter queue) is in the data-flow view: event-delivery.html",
+        "Fat events, CloudEvents envelope, metadata only (never engagement content)",
+        "Event id + per-emitter sequence number",
+        "At-least-once delivery, idempotent consumer, dead-letter queue",
+        "Lost events: detected by published-vs-consumed counts and sequence gaps, repaired by replay from the outbox",
+        "Template events are broadcast: one publish, several subscribers (Summary Service and every region), each with its own queue",
+        "Engagement events have a single consumer, the Reconciler of their own region, and never leave it",
+        "The dead-letter queue is a setting of the Event Broker, so it is not a box here; it is drawn in the data-flow view"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Reconciler — three levels",
+      "items": [
+        "1. Outbox vs consumed: continuous, no loads, catches transport loss",
+        "2. On load: every user open compares the real version with the index (free; also does the backfill)",
+        "3. Background sweep: the worker forces loads for engagements nobody opens",
+        "A mismatch appends a 'Reconciled' event; nothing is overwritten"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Rollout and worker",
+      "items": [
+        "Before the first firm: load the lineage of all versions already published into each region",
+        "Feature switched on firm by firm, only when all of a firm's engagements are indexed",
+        "Small firms first, several firms in parallel, quota per firm",
+        "All firms active in 30 days: 800,000 min / (30 × 1,440) ≈ 19 concurrent loads",
+        "Worker triggers: firm activation, a template publish (only for engagements not yet indexed) and the background sweep",
+        "'Pending' is computed as index × version cache, so 'within seconds' does not depend on the worker",
+        "On TemplatePublished the Reconciler writes the work to do in the Pending Updates DB; the worker takes it from there and records its progress (saga log) in the same database",
+        "When every engagement of a firm is indexed, the feature is switched on for that firm"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Assumptions",
+      "items": [
+        "A loaded engagement exposes its current template version, not only the creation one",
+        "Engagement ids of a firm (with product) can be listed without loading them",
+        "An outbox table can be added to the Product Template DB and to the customer databases",
+        "Withdrawing a version is an action of Template Storage, so it can publish an event",
+        "The team that owns the pods sets our concurrency limit",
+        "Version Diff is used as given; Zip Handling is our assumption and is not touched",
+        "The Engagement Mgmt team can add the call to our Query API in its existing UI; the user never calls our API directly",
+        "Discarded alternative: a separate Version Catalog service (it would duplicate data that already has an owner). It is plan B if Template Storage cannot provide lineage in its events and as a listing",
+        "Template Storage knows parent version and market at publish time, and knows the lineage of versions already published. If it does not, the content teams must declare it once (risk)",
+        "We never read the Product Template DB directly: lineage reaches us through the events and the one-time listing"
+      ]
+    }
+  ]
+}

@@ -11,3 +11,13 @@ nav:
     url: /diagram.html
   - title: Current Flows
     url: /flows.html
+  - title: To-Be Components
+    url: /to-be-components.html
+  - title: To-Be Flows
+    url: /to-be-sequence.html
+  - title: Fan-out Worker
+    url: /fan-out.html
+  - title: Data Model
+    url: /to-be-data.html
+  - title: Event Delivery (LLD)
+    url: /event-delivery-lld.html
