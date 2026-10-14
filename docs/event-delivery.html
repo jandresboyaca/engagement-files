@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>To-Be · Event delivery (LLD)</title>
+<style>
+:root{--bg:#f3f4f6;--card:#ffffff;--fg:#111827;--muted:#4b5563;--line:#d1d5db}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0b1220;--card:#111827;--fg:#f3f4f6;--muted:#9ca3af;--line:#374151}}
+:root[data-theme="dark"]{--bg:#0b1220;--card:#111827;--fg:#f3f4f6;--muted:#9ca3af;--line:#374151}
+body{font-family:system-ui,Segoe UI,Arial,sans-serif;margin:0;background:var(--bg);color:var(--fg)}
+main{max-width:1500px;margin:0 auto;padding:24px 16px}
+header{display:flex;gap:16px;align-items:flex-start;justify-content:space-between}
+h1{font-size:22px;margin:0 0 6px} p{margin:0 0 16px;color:var(--muted);max-width:900px}
+button{font:inherit;background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;white-space:nowrap}
+.lld{border-left:4px solid #ea580c;padding:8px 12px;background:var(--card);border-radius:6px;color:var(--fg)}
+.card{background:var(--card);border-radius:12px;padding:16px;overflow-x:auto;border:1px solid var(--line)}
+#out svg{max-width:100%;height:auto}
+</style></head><body><main>
+<header><div>
+<h1>To-Be · Event delivery (LLD)</h1>
+<p class="lld"><strong>Low-level design (LLD).</strong> This view goes below the level the exercise asks for. It is kept as supporting detail for one line of the design: "no event is lost".</p><p>The component view shows who produces each event; this one shows the path one event takes. The path is the same for both producers, so it is drawn once.</p>
+</div><button id="toggle" type="button">Dark / light</button></header>
+<div class="card"><div id="out"></div></div>
+</main>
+<script type="text/plain" id="src">flowchart LR
+  subgraph P["PRODUCER · existing system (Template Storage or Engagement Mgmt)"]
+    A(["Action"])
+    H["Hook<br/>in-process, not a webhook"]
+    B[("Business tables<br/>existing")]
+    O[("Outbox table<br/>added")]
+    R["Relay<br/>added"]
+    A --> H
+    H -- "1 · same transaction" --> B
+    H -- "1 · same transaction" --> O
+    O -- "2 · unsent rows" --> R
+  end
+
+  Q[["Event Broker<br/>at-least-once"]]
+  D[["Dead-letter queue"]]
+
+  subgraph N["CONSUMER · new system"]
+    C["Idempotent consumer"]
+    E[("Event stream / state")]
+    G["Gap detector"]
+    C -- "4 · new id: append" --> E
+    C -- "sequence jumps" --> G
+  end
+
+  R -- "3 · CloudEvent" --> Q
+  Q -- "deliver · retry" --> C
+  Q -- "failed N times" --> D
+  D -. "redrive" .-> Q
+  G -. "replay from n" .-> R
+</script>
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.esm.min.mjs";
+const src=document.getElementById("src").textContent, root=document.documentElement;
+const isDark=()=>root.dataset.theme? root.dataset.theme==="dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+let n=0;
+async function draw(){
+  mermaid.initialize({startOnLoad:false, theme: isDark() ? "redux-dark-color" : "redux-color"});
+  const {svg}=await mermaid.render("g"+(n++), src);
+  document.getElementById("out").innerHTML=svg;
+}
+document.getElementById("toggle").onclick=()=>{root.dataset.theme=isDark()?"light":"dark";draw();};
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change",draw);
+draw();
+</script></body></html>

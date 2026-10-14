@@ -1,0 +1,558 @@
+{
+  "schema_version": 1,
+  "diagram_type": "erd",
+  "meta": {
+    "title": "To-Be · Data model (proposed) — tables of the new databases",
+    "locale": "en",
+    "output": "data-model.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "truth",
+        "label": "Source of truth",
+        "focus": [
+          "engagement_events",
+          "firm_activation",
+          "summaries",
+          "summary_provenance"
+        ],
+        "note": "The only tables that cannot be rebuilt: the audit trail, the per-firm switch and the summaries with their provenance."
+      },
+      {
+        "id": "pending",
+        "label": "How 'pending' is computed",
+        "focus": [
+          "engagement_index",
+          "template_versions",
+          "summaries_copy"
+        ],
+        "note": "Pending is a query: engagement_index joined with template_versions. The summary text comes from summaries_copy."
+      },
+      {
+        "id": "ops",
+        "label": "Operational tables",
+        "focus": [
+          "work_items",
+          "processed_events",
+          "outbox"
+        ],
+        "note": "Worker bookkeeping, dedupe of events, and the outbox added to the existing databases."
+      }
+    ]
+  },
+  "layout": {
+    "mode": "grid",
+    "gapY": 40,
+    "gapX": 80
+  },
+  "entities": [
+    {
+      "id": "firm_activation",
+      "label": "firm_activation",
+      "tag": "Pending Updates DB",
+      "row": 0,
+      "col": 0,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "firm_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "status",
+          "type": "text  off|backfilling|on"
+        },
+        {
+          "name": "engagements_total",
+          "type": "int"
+        },
+        {
+          "name": "engagements_indexed",
+          "type": "int"
+        },
+        {
+          "name": "activated_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "engagement_index",
+      "label": "engagement_index",
+      "tag": "Pending Updates DB",
+      "row": 0,
+      "col": 1,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "engagement_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "firm_id",
+          "type": "text",
+          "key": "fk",
+          "references": "firm_activation.firm_id"
+        },
+        {
+          "name": "product_id",
+          "type": "text"
+        },
+        {
+          "name": "template_id",
+          "type": "text",
+          "key": "fk",
+          "references": "template_versions.template_id"
+        },
+        {
+          "name": "current_version",
+          "type": "text",
+          "key": "fk",
+          "references": "template_versions.version"
+        },
+        {
+          "name": "market",
+          "type": "text"
+        },
+        {
+          "name": "declined_versions",
+          "type": "text[]"
+        },
+        {
+          "name": "last_verified_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "template_versions",
+      "label": "template_versions",
+      "tag": "Pending Updates DB",
+      "row": 0,
+      "col": 2,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "template_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "version",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "parent_version",
+          "type": "text"
+        },
+        {
+          "name": "market",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "text  active|withdrawn"
+        },
+        {
+          "name": "published_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "work_items",
+      "label": "work_items",
+      "tag": "Pending Updates DB",
+      "row": 1,
+      "col": 0,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "item_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "job_id",
+          "type": "text"
+        },
+        {
+          "name": "trigger",
+          "type": "text"
+        },
+        {
+          "name": "engagement_id",
+          "type": "text",
+          "key": "fk",
+          "references": "engagement_index.engagement_id"
+        },
+        {
+          "name": "firm_id",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "text"
+        },
+        {
+          "name": "attempts",
+          "type": "int"
+        },
+        {
+          "name": "next_attempt_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "engagement_events",
+      "label": "engagement_events",
+      "tag": "Pending Updates DB",
+      "row": 1,
+      "col": 1,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "event_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "engagement_id",
+          "type": "text",
+          "key": "fk",
+          "references": "engagement_index.engagement_id"
+        },
+        {
+          "name": "sequence",
+          "type": "bigint"
+        },
+        {
+          "name": "type",
+          "type": "text"
+        },
+        {
+          "name": "template_id",
+          "type": "text"
+        },
+        {
+          "name": "version",
+          "type": "text"
+        },
+        {
+          "name": "summary_id",
+          "type": "text",
+          "key": "fk",
+          "references": "summaries_copy.summary_id"
+        },
+        {
+          "name": "user_id",
+          "type": "text"
+        },
+        {
+          "name": "occurred_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "source_event_id",
+          "type": "text",
+          "key": "uk"
+        }
+      ]
+    },
+    {
+      "id": "summaries_copy",
+      "label": "summaries_copy",
+      "tag": "Pending Updates DB",
+      "row": 1,
+      "col": 2,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "summary_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "template_id",
+          "type": "text",
+          "key": "fk",
+          "references": "template_versions.template_id"
+        },
+        {
+          "name": "from_version",
+          "type": "text"
+        },
+        {
+          "name": "to_version",
+          "type": "text",
+          "key": "fk",
+          "references": "template_versions.version"
+        },
+        {
+          "name": "text",
+          "type": "text"
+        },
+        {
+          "name": "fetched_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "processed_events",
+      "label": "processed_events",
+      "tag": "Pending Updates DB · dedupe",
+      "row": 2,
+      "col": 0,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "event_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "source",
+          "type": "text"
+        },
+        {
+          "name": "sequence",
+          "type": "bigint"
+        },
+        {
+          "name": "processed_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "summary_provenance",
+      "label": "summary_provenance",
+      "tag": "Summaries DB · global",
+      "row": 2,
+      "col": 1,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "summary_id",
+          "type": "text",
+          "key": [
+            "pk",
+            "fk"
+          ],
+          "references": "summaries.summary_id"
+        },
+        {
+          "name": "diff",
+          "type": "jsonb  exact diff used"
+        },
+        {
+          "name": "diff_hash",
+          "type": "text"
+        },
+        {
+          "name": "model",
+          "type": "text"
+        },
+        {
+          "name": "prompt_version",
+          "type": "text"
+        },
+        {
+          "name": "validation_result",
+          "type": "text"
+        },
+        {
+          "name": "generated_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "summaries",
+      "label": "summaries",
+      "tag": "Summaries DB · global",
+      "row": 2,
+      "col": 2,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "summary_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "template_id",
+          "type": "text"
+        },
+        {
+          "name": "from_version",
+          "type": "text"
+        },
+        {
+          "name": "to_version",
+          "type": "text"
+        },
+        {
+          "name": "text",
+          "type": "text"
+        },
+        {
+          "name": "status",
+          "type": "text  valid|needs_review"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        }
+      ]
+    },
+    {
+      "id": "outbox",
+      "label": "outbox",
+      "tag": "added to existing DBs",
+      "row": 3,
+      "col": 0,
+      "width": 270,
+      "attributes": [
+        {
+          "name": "event_id",
+          "type": "text",
+          "key": "pk"
+        },
+        {
+          "name": "sequence",
+          "type": "bigint",
+          "key": "uk"
+        },
+        {
+          "name": "type",
+          "type": "text"
+        },
+        {
+          "name": "payload",
+          "type": "jsonb  CloudEvent"
+        },
+        {
+          "name": "created_at",
+          "type": "timestamptz"
+        },
+        {
+          "name": "sent_at",
+          "type": "timestamptz"
+        }
+      ]
+    }
+  ],
+  "relationships": [
+    {
+      "id": "idx_firm",
+      "from": "engagement_index",
+      "to": "firm_activation",
+      "label": "belongs to",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "idx_ver",
+      "from": "engagement_index",
+      "to": "template_versions",
+      "label": "is on",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "ev_idx",
+      "from": "engagement_events",
+      "to": "engagement_index",
+      "label": "history of",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "work_idx",
+      "from": "work_items",
+      "to": "engagement_index",
+      "label": "to load",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "sum_ver",
+      "from": "summaries_copy",
+      "to": "template_versions",
+      "label": "from → to",
+      "fromCardinality": "many",
+      "toCardinality": "one"
+    },
+    {
+      "id": "ev_sum",
+      "from": "engagement_events",
+      "to": "summaries_copy",
+      "label": "summary shown",
+      "fromCardinality": "many",
+      "fromOptional": true,
+      "toCardinality": "one",
+      "toOptional": true
+    },
+    {
+      "id": "prov_sum",
+      "from": "summary_provenance",
+      "to": "summaries",
+      "label": "made from",
+      "fromCardinality": "one",
+      "toCardinality": "one"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "Three places where tables live",
+      "items": [
+        "Pending Updates DB (one per region): firm_activation, engagement_index, engagement_events, template_versions, summaries_copy, work_items, processed_events",
+        "Summaries DB (global, one instance): summaries, summary_provenance. No firm or engagement data",
+        "outbox: recommended; one table added to the Product Template DB and one to each customer database",
+        "summaries_copy holds copies of rows of summaries. It is not a foreign key: the two databases are not connected, the Reconciler asks the Summary Service"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "What each table is",
+      "items": [
+        "engagement_events: source of truth and audit trail. Append-only, never updated or deleted. type is one of Registered, UpdateApplied, UpdateDeclined, OfferWithdrawn, Reconciled",
+        "firm_activation: source of truth for the per-firm feature switch",
+        "engagement_index: derived from engagement_events, one row per engagement, rebuildable",
+        "template_versions: copy of the lineage, fed by TemplatePublished and TemplateWithdrawn, rebuildable",
+        "summaries_copy: copy fetched by the Reconciler when a TemplatePublished arrives, or on demand if one is missing; rebuildable",
+        "processed_events: makes the Reconciler idempotent and reveals sequence gaps",
+        "work_items: the worker's work list and saga log, purgeable when a job ends",
+        "work_items.trigger is activation, publish or sweep; work_items.status is pending, in_flight, done, failed or parked",
+        "outbox.sent_at stays null until the broker acknowledges the event"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Rules the model encodes",
+      "items": [
+        "'Pending' is a query, not a table: engagement_index joined with template_versions",
+        "summaries are immutable: a regenerated summary is a new row with a new id, the old one is kept",
+        "summaries is unique on template_id + from_version + to_version + prompt_version",
+        "outbox rows are written in the same transaction as the business change; the relay publishes rows whose sent_at is null",
+        "source_event_id is unique in engagement_events, so the same incoming event cannot be recorded twice"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "Open points",
+      "items": [
+        "It is a proposal: columns and types are indicative, indexes are not defined",
+        "It draws the event-sourced option (events are the truth, the index is a projection). The simpler option is still open: engagement_index as the truth and engagement_events only as an audit log",
+        "The only identifiers of people or firms are firm_id and user_id. No engagement content is stored anywhere"
+      ]
+    }
+  ]
+}
