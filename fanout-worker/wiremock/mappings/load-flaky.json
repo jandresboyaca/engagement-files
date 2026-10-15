@@ -1,0 +1,42 @@
+{
+  "mappings": [
+    {
+      "priority": 1,
+      "scenarioName": "eng-flaky",
+      "requiredScenarioState": "Started",
+      "newScenarioState": "failed-once",
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/firms/[^/]+/engagements/eng-flaky/load"
+      },
+      "response": {
+        "status": 503
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "eng-flaky",
+      "requiredScenarioState": "failed-once",
+      "newScenarioState": "failed-twice",
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/firms/[^/]+/engagements/eng-flaky/load"
+      },
+      "response": {
+        "status": 503
+      }
+    },
+    {
+      "priority": 1,
+      "scenarioName": "eng-flaky",
+      "requiredScenarioState": "failed-twice",
+      "request": {
+        "method": "POST",
+        "urlPathPattern": "/firms/[^/]+/engagements/eng-flaky/load"
+      },
+      "response": {
+        "status": 204
+      }
+    }
+  ]
+}
