@@ -18,3 +18,7 @@ Architecture design exercise: surfacing pending product-template updates across 
 - [Fan-out Worker](fan-out.html): one mechanism reused by three triggers, and how the one-minute load is handled (interactive)
 - [Data Model](to-be-data.html): proposed tables of the new databases (interactive)
 - [Event Delivery (LLD)](event-delivery-lld.html): low-level design of how one event travels; more detail than the exercise asks for
+
+## Process
+
+- [AI Usage](ai-usage-patterns.html): how AI assistants were used in this exercise, as patterns
