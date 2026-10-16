@@ -2,33 +2,35 @@ package com.caseware.fanout.adapter.out.persistence;
 
 import com.caseware.fanout.application.port.out.CapacitySettingsPort;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.stereotype.Repository;
+import java.time.Instant;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DuplicateKeyException;
+import org.springframework.stereotype.Component;
 
 /** C and F in the one-row table {@code capacity_settings}; the operator changes them with SQL. */
-@Repository
+@Component
+@RequiredArgsConstructor
 public class JdbcCapacitySettings implements CapacitySettingsPort {
 
-    private final JdbcClient jdbcClient;
-
-    public JdbcCapacitySettings(JdbcClient jdbcClient) {
-        this.jdbcClient = jdbcClient;
-    }
+    private final CapacitySettingsRowRepository settings;
 
     @Override
     public ConcurrencyLimits current() {
-        return jdbcClient.sql("select global_limit, per_firm_limit from capacity_settings where id = 1")
-                .query((rs, rowNum) -> new ConcurrencyLimits(rs.getInt("global_limit"), rs.getInt("per_firm_limit")))
-                .optional()
+        return settings.findById(CapacitySettingsRow.ID)
+                .map(row -> new ConcurrencyLimits(row.globalLimit(), row.perFirmLimit()))
                 .orElseThrow(() -> new IllegalStateException("capacity_settings has not been initialised"));
     }
 
     @Override
     public void initialiseIfAbsent(ConcurrencyLimits fromConfiguration) {
-        jdbcClient.sql("""
-                        insert into capacity_settings (id, global_limit, per_firm_limit, updated_at)
-                        values (1, ?, ?, now()) on conflict (id) do nothing""")
-                .params(fromConfiguration.global(), fromConfiguration.perFirm())
-                .update();
+        if (settings.existsById(CapacitySettingsRow.ID)) {
+            return;
+        }
+        try {
+            settings.save(CapacitySettingsRow.newRow(fromConfiguration.global(), fromConfiguration.perFirm(),
+                    Instant.now()));
+        } catch (DuplicateKeyException insertedConcurrently) {
+            // Another process inserted it first; its values stand.
+        }
     }
 }

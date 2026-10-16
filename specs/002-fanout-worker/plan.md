@@ -20,12 +20,13 @@ semaphores, so the cap holds across a crash (research §1, disagreement D1).
 **Language/Version**: Java 21
 
 **Primary Dependencies**: Spring Boot 4.1.1 (Initializr: `spring-restclient`, `jdbc`, `postgresql`,
-`flyway`, `lombok`, `configuration-processor`, `validation`, `testcontainers`, `docker-compose`);
+`flyway`, `lombok`, `configuration-processor`, `validation`, `testcontainers`, `docker-compose`;
+after US1 the `jdbc` starter was replaced by `spring-boot-starter-data-jdbc`, research §6);
 added by hand: MapStruct 1.6.3 with `lombok-mapstruct-binding` 0.2.0, ArchUnit 1.5.1,
 `wiremock-standalone` 3.13.2 (research §9)
 
 **Storage**: PostgreSQL 18 (`postgres:18-alpine`), schema by Flyway; tables `work_item`,
-`capacity_settings` (data-model.md)
+`capacity_settings` (data-model.md); accessed through Spring Data JDBC (no JPA)
 
 **Testing**: JUnit 5, AssertJ, ArchUnit (`mvn test`, no Spring, no Docker); Testcontainers and
 WireMock for `*IT` (`mvn verify`, failsafe)
@@ -109,7 +110,8 @@ fanout-worker/
 │   ├── adapter/
 │   │   ├── in/scheduler/        # DispatchScheduler (@Scheduled fixed delay; first tick runs resume, then the cycle)
 │   │   └── out/
-│   │       ├── persistence/     # JdbcWorkItemRepository, JdbcCapacitySettings, WorkItemRow, WorkItemRowMapper (MapStruct)
+│   │       ├── persistence/     # JdbcWorkItemRepository, JdbcCapacitySettings, WorkItemRow (Spring Data JDBC entity),
+│   │       │                    # WorkItemRowRepository, CapacitySettingsRow(+Repository), WorkItemRowMapper (MapStruct)
 │   │       ├── downstream/      # HttpLoadEngagementAdapter (RestClient, connect/read timeouts)
 │   │       ├── time/            # SystemClockAdapter
 │   │       └── event/           # LoggingDomainEventPublisher

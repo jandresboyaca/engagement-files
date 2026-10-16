@@ -5,14 +5,22 @@ import com.caseware.fanout.domain.model.EngagementId;
 import com.caseware.fanout.domain.model.FirmId;
 import com.caseware.fanout.domain.model.WorkItem;
 import com.caseware.fanout.domain.model.WorkItemId;
+import java.time.Instant;
 import java.util.UUID;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 /** Maps a row to and from the aggregate's snapshot; value objects are unwrapped by the methods below. */
 @Mapper
 interface WorkItemRowMapper {
 
-    WorkItemRow toRow(WorkItem.Snapshot snapshot);
+    /** A row to insert: no version yet, so Spring Data inserts it. */
+    @Mapping(target = "version", ignore = true)
+    WorkItemRow toNewRow(WorkItem.Snapshot snapshot, Instant updatedAt);
+
+    /** A row to update, conditional on {@code expectedVersion}. */
+    @Mapping(target = "version", source = "expectedVersion")
+    WorkItemRow toRow(WorkItem.Snapshot snapshot, Long expectedVersion, Instant updatedAt);
 
     WorkItem.Snapshot toSnapshot(WorkItemRow row);
 

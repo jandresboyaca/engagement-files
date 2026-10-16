@@ -8,8 +8,9 @@ import com.caseware.fanout.domain.policy.ConcurrencyLimits;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
+import org.springframework.boot.data.jdbc.test.autoconfigure.DataJdbcTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.testcontainers.junit.jupiter.Container;
@@ -17,7 +18,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
-@JdbcTest
+@DataJdbcTest
+@Import(JdbcCapacitySettings.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 class JdbcCapacitySettingsIT {
@@ -29,8 +31,11 @@ class JdbcCapacitySettingsIT {
     @Autowired
     private JdbcClient jdbcClient;
 
+    @Autowired
+    private JdbcCapacitySettings adapter;
+
     private JdbcCapacitySettings settings() {
-        return new JdbcCapacitySettings(jdbcClient);
+        return adapter;
     }
 
     @Test

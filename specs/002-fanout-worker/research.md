@@ -198,15 +198,27 @@ it supports that; we do not rely on it.
 
 ## 6. How the work list is stored
 
-**Decision**: PostgreSQL, one table `work_item` plus `capacity_settings`, managed by Flyway; JDBC
-through `JdbcClient` in the persistence adapter. Key constraints:
+**Decision**: PostgreSQL, one table `work_item` plus `capacity_settings`, managed by Flyway, and
+accessed through Spring Data JDBC in the persistence adapter. `WorkItemRow` is the `@Table`
+entity with `@Id` and `@Version`, mapped to and from `WorkItem.Snapshot` by MapStruct. Reads by id,
+open item by engagement, oldest due items and expired leases are derived query methods, with
+their ordering and `Limit` in the method. Only the three aggregations (`countInFlight`,
+`findFirmsWithDueWork`, `status`) are SQL, as `@Query` on the repository interface; no SQL is
+built in Java. `capacity_settings` goes through a `CrudRepository`. Key constraints:
 - A partial unique index on `engagement_id` where `state IN ('OUTSTANDING','IN_FLIGHT')`: at most
-  one open item per engagement (FR-013). Submit is `INSERT … ON CONFLICT DO NOTHING`, so the
-  same engagement from three triggers gives one item (SC-004). Done and parked items do not block
-  a new item (US5 scenario 3, FR-012).
-- Every update is `… WHERE id = ? AND version = ?`: it guards against two writes racing each
-  other, and is how the re-check before a load works (Clarification 1). Answers are not matched
-  by version but by attempt number, which the aggregate compares with its current load (§5).
+  one open item per engagement (FR-013). Submit saves a new row; a `DuplicateKeyException` from
+  that index means an open item exists, and the adapter returns it. So the same engagement from
+  three triggers gives one item (SC-004). Done and parked items do not block a new item (US5
+  scenario 3, FR-012).
+- Every update is conditional on `@Version` (Spring Data JDBC writes `… WHERE id = ? AND
+  version = ?` and throws `OptimisticLockingFailureException` when no row matches, which the
+  adapter turns into `false`): it guards against two writes racing each other, and is how the
+  re-check before a load works (Clarification 1). Answers are not matched by version but by
+  attempt number, which the aggregate compares with its current load (§5).
+- The version is a `Long`: a null version marks a new row, and Spring Data writes 0 on insert,
+  which keeps the contract's first version at 0 (a primitive `long` would start at 1).
+- No adapter method opens a transaction around the insert: in PostgreSQL a failed insert aborts the
+  surrounding transaction, and the lookup of the existing open item must still run.
 - Indexes for the cycle: due outstanding work by `(firm_id, added_at)` and in-flight by
   `lease_until`.
 - Terminal rows are kept; purging is out of scope (data-model.md).
@@ -223,11 +235,20 @@ design [D: "PostgreSQL per region"].
   answer "fewest in flight per firm" or "is there already an open item for this engagement", and
   visibility timeouts would replace our leases with less control.
 - *In-memory list.* Loses its place on a crash.
-- *Spring Data JDBC repositories.* Hides the conditional `version` updates and the `ON CONFLICT`
-  insert, which are the point of the adapter.
+- *JPA with Hibernate.* A persistence context, dirty checking, lazy loading and its own
+  optimistic-locking rules for one flat table with no relations; it would also move the
+  conditional update and the duplicate-key handling behind session behaviour that is harder to
+  reason about at the moment of a claim. Spring Data JDBC writes exactly the statement that is
+  asked for, when it is asked for.
+- *Hand-written SQL through `JdbcClient` (the first implementation, T013, replaced after US1).*
+  Correct and explicit, but every query was a string built in Java. Spring Data JDBC keeps the
+  same behaviour, checked by the same contract test, with derived queries and SQL only where an
+  aggregation needs it.
 
 **Relies on**: spec FR-013, FR-015, SC-004; the constitution's stack; `docs/design.md`
-("PostgreSQL per region"). No reference book or reference scenario from the constitution was consulted for this decision.
+("PostgreSQL per region"); the Spring Data JDBC 4.1.1 sources, read on 2026-10-15 for how an
+insert sets the version (`JdbcAggregateTemplate`), which exception a version mismatch raises, and
+`Limit` support in derived queries. No reference book or reference scenario from the constitution was consulted for this decision.
 
 ## 7. Inbound adapters
 

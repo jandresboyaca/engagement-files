@@ -9,8 +9,9 @@ import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
-import org.springframework.boot.jdbc.test.autoconfigure.JdbcTest;
+import org.springframework.boot.data.jdbc.test.autoconfigure.DataJdbcTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.testcontainers.junit.jupiter.Container;
@@ -20,9 +21,10 @@ import org.testcontainers.utility.DockerImageName;
 
 /**
  * Runs the repository contract against PostgreSQL. The contract's test methods are declared in
- * another class, so @JdbcTest's rollback does not cover them; newRepository() empties the table.
+ * another class, so @DataJdbcTest's rollback does not cover them; newRepository() empties the table.
  */
-@JdbcTest
+@DataJdbcTest
+@Import(JdbcWorkItemRepository.class)
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 class JdbcWorkItemRepositoryIT extends WorkItemRepositoryContract {
@@ -34,10 +36,13 @@ class JdbcWorkItemRepositoryIT extends WorkItemRepositoryContract {
     @Autowired
     private JdbcClient jdbcClient;
 
+    @Autowired
+    private JdbcWorkItemRepository adapter;
+
     @Override
     protected WorkItemRepositoryPort newRepository() {
         jdbcClient.sql("delete from work_item").update();
-        return new JdbcWorkItemRepository(jdbcClient);
+        return adapter;
     }
 
     private void insertRaw(String state, Timestamp leaseUntil) {
