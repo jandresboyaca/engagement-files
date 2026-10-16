@@ -10,6 +10,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpConnectTimeoutException;
 import java.net.http.HttpTimeoutException;
 import java.time.Duration;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -19,13 +20,10 @@ import org.springframework.web.client.RestClientException;
  * result into a neutral {@link LoadOutcome}. Decides nothing; never throws for an answer or a
  * network error; never reads the response body.
  */
+@RequiredArgsConstructor
 public class HttpLoadEngagementAdapter implements LoadEngagementPort {
 
     private final RestClient restClient;
-
-    public HttpLoadEngagementAdapter(RestClient restClient) {
-        this.restClient = restClient;
-    }
 
     /** The client this adapter expects: HTTP/1.1 on the JDK client, with connect and read timeouts. */
     public static RestClient restClient(URI baseUrl, Duration connectTimeout, Duration readTimeout) {
