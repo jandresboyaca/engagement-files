@@ -35,6 +35,7 @@ public final class DispatchCycleService implements RunDispatchCycleUseCase {
 
     private static final Logger LOG = System.getLogger(DispatchCycleService.class.getName());
     private static final int MAX_REAPPLIES = 3;
+    private static final int EXPIRY_BATCH = 500;
 
     private final WorkItemRepositoryPort repository;
     private final LoadEngagementPort ems;
@@ -63,6 +64,7 @@ public final class DispatchCycleService implements RunDispatchCycleUseCase {
     @Override
     public DispatchResult runOnce() {
         Instant now = clock.now();
+        int expired = expireLeases(now);
         ConcurrencyLimits limits = settings.current();
         InFlightCounts inFlight = repository.countInFlight(now);
         Map<FirmId, Integer> slots = fairness.allocate(limits, inFlight, repository.findFirmsWithDueWork(now));
@@ -81,7 +83,22 @@ public final class DispatchCycleService implements RunDispatchCycleUseCase {
                 startLoad(item);
             }
         }
-        return new DispatchResult(0, started, skipped);
+        return new DispatchResult(expired, started, skipped);
+    }
+
+    /** Step 1: loads that did not answer before their lease ended are timed-out attempts. */
+    private int expireLeases(Instant now) {
+        int expired = 0;
+        for (WorkItem item : repository.findExpiredLeases(now, EXPIRY_BATCH)) {
+            long readVersion = item.version();
+            item.expireLease(now, retryPolicy);
+            List<DomainEvent> raised = item.pullEvents();
+            if (repository.save(item, readVersion)) {
+                expired++;
+                raised.forEach(events::publish);
+            }
+        }
+        return expired;
     }
 
     private void startLoad(WorkItem claimed) {

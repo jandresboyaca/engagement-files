@@ -31,6 +31,12 @@ public class FanoutConfiguration {
 
     /** One virtual thread per load; the limit is C, enforced by the dispatch cycle, not by this pool. */
     @Bean
+    RetryPolicy retryPolicy(FanoutProperties properties) {
+        FanoutProperties.Retry retry = properties.retry();
+        return new RetryPolicy(retry.maxAttempts(), retry.baseDelay(), retry.maxDelay());
+    }
+
+    @Bean
     ExecutorService loadExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
     }
@@ -53,12 +59,11 @@ public class FanoutConfiguration {
     @Bean
     DispatchCycleService dispatchCycleService(WorkItemRepositoryPort repository, LoadEngagementPort ems,
             CapacitySettingsPort capacitySettings, ClockPort clock, DomainEventPublisherPort events,
-            ExecutorService loadExecutor, FairnessPolicy fairnessPolicy, FanoutProperties properties) {
+            ExecutorService loadExecutor, FairnessPolicy fairnessPolicy, RetryPolicy retryPolicy,
+            FanoutProperties properties) {
         capacitySettings.initialiseIfAbsent(
                 new ConcurrencyLimits(properties.limits().global(), properties.limits().perFirm()));
-        FanoutProperties.Retry retry = properties.retry();
         return new DispatchCycleService(repository, ems, capacitySettings, clock, events, loadExecutor,
-                fairnessPolicy, properties.load().timeout().plus(properties.load().leaseGrace()),
-                new RetryPolicy(retry.maxAttempts(), retry.baseDelay(), retry.maxDelay()));
+                fairnessPolicy, properties.load().timeout().plus(properties.load().leaseGrace()), retryPolicy);
     }
 }
