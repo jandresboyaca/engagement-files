@@ -121,7 +121,7 @@ it would take alone (spec US2).
 
 ### Tests for User Story 2 (write first, watch them fail)
 
-- [ ] T025 [P] [US2] Add to `T/domain/policy/FairnessPolicyTest.java`: each slot goes to the firm with the fewest in flight, counting slots given in this cycle; ties go to the firm whose oldest due item waited longest; a firm with 0 in flight beats an older firm holding F − 1 or F (US2 scenario 2); never more than F per firm (US2 scenario 1); a single firm is still capped at F (US2 scenario 3).
+- [X] T025 [P] [US2] Add to `T/domain/policy/FairnessPolicyTest.java`: each slot goes to the firm with the fewest in flight, counting slots given in this cycle; ties go to the firm whose oldest due item waited longest; a firm with 0 in flight beats an older firm holding F − 1 or F (US2 scenario 2); never more than F per firm (US2 scenario 1); a single firm is still capped at F (US2 scenario 3).
 - [ ] T026 [US2] Add US2 cases to `T/application/service/DispatchCycleServiceTest.java`: US2 scenarios 1–3 through the service; SC-002 (C = 20, F = 5, 40,000 items for firm A added first, 40 each for three firms added after; running cycles and answering every in-flight load once per round, each small firm is `DONE` within 9 rounds of being added); in the same run, after every cycle, total in flight ≤ C and each firm's in flight ≤ F (SC-001 at 40,000 items).
 
 ### Implementation for User Story 2
