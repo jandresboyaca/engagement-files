@@ -33,6 +33,8 @@ there was no open item (already done, parked, or never added). If the item is `I
 load is not cancelled: the item keeps its lease, so its slot stays counted against C and F until
 the load answers (the answer then only clears the lease) or the lease expires. Publishes
 `WorkItemCompleted`.
+On a save conflict (for example the cycle claimed the item in between) it reloads the open item and
+reapplies, at most 3 times: no open item on reload → `false`; still conflicting → `false` and a WARN.
 
 ## RunDispatchCycleUseCase (FR-003 to FR-011)
 
