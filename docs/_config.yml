@@ -27,3 +27,5 @@ nav:
         url: /to-be-data.html
       - title: Event delivery (LLD)
         url: /event-delivery-lld.html
+  - title: AI usage
+    url: /ai-usage-patterns.html
