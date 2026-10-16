@@ -2,6 +2,7 @@ package com.caseware.fanout.domain.model;
 
 import com.caseware.fanout.domain.event.DomainEvent;
 import com.caseware.fanout.domain.event.WorkItemCompleted;
+import com.caseware.fanout.domain.event.WorkItemParked;
 import com.caseware.fanout.domain.exception.InvalidTransitionException;
 import com.caseware.fanout.domain.policy.RetryPolicy;
 import java.time.Duration;
@@ -81,13 +82,37 @@ public final class WorkItem {
         }
         if (state == WorkItemState.IN_FLIGHT) {
             if (!outcome.isSuccess()) {
-                throw new UnsupportedOperationException("failed answers are added in T032");
+                fail(outcome, now, retryPolicy);
+                return;
             }
             state = WorkItemState.DONE;
             leaseUntil = null;
             events.add(new WorkItemCompleted(id, engagementId, firmId, attempt, now));
         } else if (state == WorkItemState.DONE && leaseUntil != null) {
             leaseUntil = null;
+        }
+    }
+
+    /** A load that has not answered by the end of its lease is a timed-out attempt (FR-009). */
+    public void expireLease(Instant now, RetryPolicy retryPolicy) {
+        if (state != WorkItemState.IN_FLIGHT || leaseUntil.isAfter(now)) {
+            throw new InvalidTransitionException("expireLease not allowed before the lease ends for " + id.value());
+        }
+        fail(new LoadOutcome.TimedOut(), now, retryPolicy);
+    }
+
+    private void fail(LoadOutcome failure, Instant now, RetryPolicy retryPolicy) {
+        leaseUntil = null;
+        lastError = failure.errorCode();
+        switch (retryPolicy.decide(attempt, failure, now)) {
+            case RetryPolicy.RetryAt retry -> {
+                state = WorkItemState.OUTSTANDING;
+                nextAttemptAt = retry.at();
+            }
+            case RetryPolicy.Park park -> {
+                state = WorkItemState.PARKED;
+                events.add(new WorkItemParked(id, engagementId, firmId, attempt, lastError, now));
+            }
         }
     }
 
