@@ -208,6 +208,68 @@ class DispatchCycleServiceTest {
         assertThat(repository.countInFlight(T0).perFirm()).isEqualTo(expected);
     }
 
+    // US2 scenario 2: when a slot frees up, the firm with nothing in flight gets it before the older firm
+    @Test
+    void aFreedSlotGoesToTheNewlyAddedFirmBeforeTheFirmHoldingItsShare() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        for (int i = 0; i < 6; i++) {
+            add(repository, "a-" + i, "firm-a", T0.minusSeconds(100 - i));
+        }
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(4, 4)));
+        assertThat(service.runOnce().loadsStarted()).isEqualTo(4);
+        for (int i = 0; i < 3; i++) {
+            add(repository, "b-" + i, "firm-b", T0.minusSeconds(10 - i));
+        }
+
+        executor.runNext();
+        assertThat(service.runOnce().loadsStarted()).isEqualTo(1);
+
+        assertThat(repository.countInFlight(clock.now()).perFirm())
+                .isEqualTo(Map.of(new FirmId("firm-a"), 3, new FirmId("firm-b"), 1));
+    }
+
+    // US2 scenarios 1 and 3, SC-002, and SC-001 at 40,000 items
+    @Test
+    void smallFirmsAddedAfterALargeOneFinishWithinNineRoundsWithinCAndF() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        for (int i = 0; i < 40_000; i++) {
+            add(repository, "a-" + i, "firm-a", T0.minusSeconds(100_000 - i));
+        }
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(20, 5)));
+
+        service.runOnce();
+        assertThat(repository.countInFlight(clock.now()).perFirm())
+                .as("a single firm is still capped at F").isEqualTo(Map.of(new FirmId("firm-a"), 5));
+        executor.runAll();
+
+        List<FirmId> smallFirms = List.of(new FirmId("firm-b"), new FirmId("firm-c"), new FirmId("firm-d"));
+        for (FirmId firm : smallFirms) {
+            for (int i = 0; i < 40; i++) {
+                add(repository, firm.value() + "-" + i, firm.value(), T0.minusSeconds(40 - i));
+            }
+        }
+
+        Map<FirmId, Integer> roundDone = new java.util.HashMap<>();
+        for (int round = 1; round <= 12 && roundDone.size() < smallFirms.size(); round++) {
+            service.runOnce();
+            InFlightCounts inFlight = repository.countInFlight(clock.now());
+            assertThat(inFlight.total()).as("loads in flight after round %d", round).isLessThanOrEqualTo(20);
+            assertThat(inFlight.perFirm().values()).as("per-firm loads after round %d", round)
+                    .allMatch(loads -> loads <= 5);
+            executor.runAll();
+            Map<FirmId, Map<WorkItemState, Long>> byFirm = repository.status(clock.now()).countsByFirm();
+            for (FirmId firm : smallFirms) {
+                long done = byFirm.getOrDefault(firm, Map.of()).getOrDefault(WorkItemState.DONE, 0L);
+                if (done == 40) {
+                    roundDone.putIfAbsent(firm, round);
+                }
+            }
+        }
+
+        assertThat(roundDone).containsOnlyKeys(smallFirms);
+        assertThat(roundDone.values()).allMatch(round -> round <= 9);
+    }
+
     /** Lets a test act between the service's reads and writes, as another component would. */
     private static final class InterferingRepository implements WorkItemRepositoryPort {
 
