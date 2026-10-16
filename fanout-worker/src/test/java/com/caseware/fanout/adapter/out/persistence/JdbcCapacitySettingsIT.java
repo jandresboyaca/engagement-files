@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.caseware.fanout.adapter.out.time.SystemClockAdapter;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,7 +21,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
 @DataJdbcTest
-@Import(JdbcCapacitySettings.class)
+@Import({JdbcCapacitySettings.class, SystemClockAdapter.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @DirtiesContext

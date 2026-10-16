@@ -1,8 +1,8 @@
 package com.caseware.fanout.adapter.out.persistence;
 
 import com.caseware.fanout.application.port.out.CapacitySettingsPort;
+import com.caseware.fanout.application.port.out.ClockPort;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
-import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Component;
@@ -13,6 +13,7 @@ import org.springframework.stereotype.Component;
 public class JdbcCapacitySettings implements CapacitySettingsPort {
 
     private final CapacitySettingsRowRepository settings;
+    private final ClockPort clock;
 
     @Override
     public ConcurrencyLimits current() {
@@ -28,7 +29,7 @@ public class JdbcCapacitySettings implements CapacitySettingsPort {
         }
         try {
             settings.save(CapacitySettingsRow.newRow(fromConfiguration.global(), fromConfiguration.perFirm(),
-                    Instant.now()));
+                    clock.now()));
         } catch (DuplicateKeyException insertedConcurrently) {
             // Another process inserted it first; its values stand.
         }

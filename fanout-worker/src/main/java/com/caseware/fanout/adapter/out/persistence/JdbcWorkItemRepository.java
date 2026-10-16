@@ -2,6 +2,7 @@ package com.caseware.fanout.adapter.out.persistence;
 
 import com.caseware.fanout.application.dto.SubmitResult;
 import com.caseware.fanout.application.dto.WorkStatus;
+import com.caseware.fanout.application.port.out.ClockPort;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryPort;
 import com.caseware.fanout.domain.model.EngagementId;
 import com.caseware.fanout.domain.model.FirmId;
@@ -38,6 +39,7 @@ public class JdbcWorkItemRepository implements WorkItemRepositoryPort {
     private static final int INSERT_RETRIES = 3;
 
     private final WorkItemRowRepository rows;
+    private final ClockPort clock;
     private final WorkItemRowMapper mapper = Mappers.getMapper(WorkItemRowMapper.class);
 
     private WorkItem toWorkItem(WorkItemRow row) {
@@ -49,7 +51,7 @@ public class JdbcWorkItemRepository implements WorkItemRepositoryPort {
     public SubmitResult insertIfNoOpenItem(WorkItem item) {
         for (int i = 0; i < INSERT_RETRIES; i++) {
             try {
-                rows.save(mapper.toNewRow(item.snapshot(), Instant.now()));
+                rows.save(mapper.toNewRow(item.snapshot(), clock.now()));
                 return new SubmitResult(item.id(), true);
             } catch (DuplicateKeyException openItemExists) {
                 Optional<WorkItem> open = findOpenByEngagement(item.engagementId());
@@ -102,7 +104,7 @@ public class JdbcWorkItemRepository implements WorkItemRepositoryPort {
     @Override
     public boolean save(WorkItem item, long expectedVersion) {
         try {
-            rows.save(mapper.toRow(item.snapshot(), expectedVersion, Instant.now()));
+            rows.save(mapper.toRow(item.snapshot(), expectedVersion, clock.now()));
             return true;
         } catch (OptimisticLockingFailureException changedSinceRead) {
             return false;

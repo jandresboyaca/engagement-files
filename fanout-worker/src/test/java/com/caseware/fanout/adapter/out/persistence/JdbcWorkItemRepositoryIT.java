@@ -2,6 +2,7 @@ package com.caseware.fanout.adapter.out.persistence;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.caseware.fanout.adapter.out.time.SystemClockAdapter;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryContract;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryPort;
 import java.sql.Timestamp;
@@ -25,7 +26,7 @@ import org.testcontainers.utility.DockerImageName;
  * another class, so @DataJdbcTest's rollback does not cover them; newRepository() empties the table.
  */
 @DataJdbcTest
-@Import(JdbcWorkItemRepository.class)
+@Import({JdbcWorkItemRepository.class, SystemClockAdapter.class})
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Testcontainers
 @DirtiesContext
