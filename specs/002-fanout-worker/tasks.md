@@ -164,7 +164,7 @@ count before its cycle, and nothing changes state because of it.
 
 ### Tests for User Story 4 (write first, watch them fail)
 
-- [ ] T035 [P] [US4] Write `T/application/service/ResumeAfterRestartServiceTest.java`: `resume()` returns the number of items in state `IN_FLIGHT`, whatever their lease; logs it; changes no item (the fake repository's versions are unchanged).
+- [X] T035 [P] [US4] Write `T/application/service/ResumeAfterRestartServiceTest.java`: `resume()` returns the number of items in state `IN_FLIGHT`, whatever their lease; logs it; changes no item (the fake repository's versions are unchanged).
 - [ ] T036 [P] [US4] Write `T/adapter/in/scheduler/DispatchSchedulerTest.java` (plain unit test, fake use cases, no Spring): the first tick calls `resume()` and then `runOnce()`, in that order; later ticks call only `runOnce()`.
 
 ### Implementation for User Story 4
