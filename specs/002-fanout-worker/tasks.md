@@ -190,7 +190,7 @@ completion starts a new item.
 
 ### Implementation for User Story 5
 
-- [ ] T041 [US5] Implement `J/application/service/SubmitWorkService.java` and `J/application/service/MarkDoneService.java`, and their beans in `J/config/`, to pass T038, T039 and T040. Run `./mvnw verify`.
+- [X] T041 [US5] Implement `J/application/service/SubmitWorkService.java` and `J/application/service/MarkDoneService.java`, and their beans in `J/config/`, to pass T038, T039 and T040. Run `./mvnw verify`.
 
 **Checkpoint**: all five user stories pass together.
 
