@@ -186,7 +186,7 @@ completion starts a new item.
 
 - [X] T038 [P] [US5] Write `T/application/service/SubmitWorkServiceTest.java`: submit creates an `OUTSTANDING` item due now (FR-001); US5 scenario 1 (adding an engagement that is outstanding or in flight returns the same id with `created = false`); SC-004 (the same engagement from `ACTIVATION`, `PUBLISH` and `SWEEP` gives one item and, after dispatch cycles, exactly one call to `FakeLoadEngagement`); US5 scenario 3 (after `DONE`, re-adding creates a new item that is loaded again); after `PARKED`, re-adding creates a new item (FR-012); invalid ids are rejected by the value objects.
 - [X] T039 [P] [US5] Write `T/application/service/MarkDoneServiceTest.java`: US5 scenario 2 (outstanding item marked done → `DONE`, `WorkItemCompleted` published, and the next cycle does not load it); in-flight item marked done → `DONE` with lease kept (FR-003); no open item → returns `false`, nothing changes.
-- [ ] T040 [US5] Write `T/DeduplicationScenarioIT.java` (Spring context, `test` profile, Testcontainers PostgreSQL, in-JVM WireMock): one engagement submitted three times through `SubmitWorkUseCase` (`ACTIVATION`, `PUBLISH`, `SWEEP`) gives one row and exactly one WireMock request (SC-004 end to end).
+- [X] T040 [US5] Write `T/DeduplicationScenarioIT.java` (Spring context, `test` profile, Testcontainers PostgreSQL, in-JVM WireMock): one engagement submitted three times through `SubmitWorkUseCase` (`ACTIVATION`, `PUBLISH`, `SWEEP`) gives one row and exactly one WireMock request (SC-004 end to end).
 
 ### Implementation for User Story 5
 

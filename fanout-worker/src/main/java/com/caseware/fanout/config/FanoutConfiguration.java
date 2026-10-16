@@ -8,6 +8,7 @@ import com.caseware.fanout.application.port.out.LoadEngagementPort;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryPort;
 import com.caseware.fanout.application.service.DispatchCycleService;
 import com.caseware.fanout.application.service.ResumeAfterRestartService;
+import com.caseware.fanout.application.service.SubmitWorkService;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
 import com.caseware.fanout.domain.policy.FairnessPolicy;
 import com.caseware.fanout.domain.policy.RetryPolicy;
@@ -71,5 +72,10 @@ public class FanoutConfiguration {
     @Bean
     ResumeAfterRestartService resumeAfterRestartService(WorkItemRepositoryPort repository, ClockPort clock) {
         return new ResumeAfterRestartService(repository, clock);
+    }
+
+    @Bean
+    SubmitWorkService submitWorkService(WorkItemRepositoryPort repository, ClockPort clock) {
+        return new SubmitWorkService(repository, clock);
     }
 }
