@@ -7,6 +7,7 @@ import com.caseware.fanout.application.port.out.DomainEventPublisherPort;
 import com.caseware.fanout.application.port.out.LoadEngagementPort;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryPort;
 import com.caseware.fanout.application.service.DispatchCycleService;
+import com.caseware.fanout.application.service.ResumeAfterRestartService;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
 import com.caseware.fanout.domain.policy.FairnessPolicy;
 import com.caseware.fanout.domain.policy.RetryPolicy;
@@ -29,13 +30,13 @@ public class FanoutConfiguration {
         return new FairnessPolicy();
     }
 
-    /** One virtual thread per load; the limit is C, enforced by the dispatch cycle, not by this pool. */
     @Bean
     RetryPolicy retryPolicy(FanoutProperties properties) {
         FanoutProperties.Retry retry = properties.retry();
         return new RetryPolicy(retry.maxAttempts(), retry.baseDelay(), retry.maxDelay());
     }
 
+    /** One virtual thread per load; the limit is C, enforced by the dispatch cycle, not by this pool. */
     @Bean
     ExecutorService loadExecutor() {
         return Executors.newVirtualThreadPerTaskExecutor();
@@ -65,5 +66,10 @@ public class FanoutConfiguration {
                 new ConcurrencyLimits(properties.limits().global(), properties.limits().perFirm()));
         return new DispatchCycleService(repository, ems, capacitySettings, clock, events, loadExecutor,
                 fairnessPolicy, properties.load().timeout().plus(properties.load().leaseGrace()), retryPolicy);
+    }
+
+    @Bean
+    ResumeAfterRestartService resumeAfterRestartService(WorkItemRepositoryPort repository, ClockPort clock) {
+        return new ResumeAfterRestartService(repository, clock);
     }
 }

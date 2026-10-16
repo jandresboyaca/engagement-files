@@ -169,7 +169,7 @@ count before its cycle, and nothing changes state because of it.
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Implement `J/application/service/ResumeAfterRestartService.java`, the first-tick hook in `J/adapter/in/scheduler/DispatchScheduler.java`, and the bean in `J/config/` to pass T035 and T036. Run `./mvnw verify`; T034 stays green.
+- [X] T037 [US4] Implement `J/application/service/ResumeAfterRestartService.java`, the first-tick hook in `J/adapter/in/scheduler/DispatchScheduler.java`, and the bean in `J/config/` to pass T035 and T036. Run `./mvnw verify`; T034 stays green.
 
 **Checkpoint**: US1 to US4 pass together.
 

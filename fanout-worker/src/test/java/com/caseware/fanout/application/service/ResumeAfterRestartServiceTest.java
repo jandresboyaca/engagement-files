@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -88,7 +89,7 @@ class ResumeAfterRestartServiceTest {
 
         service.resume();
 
-        assertThat(logged).extracting(LogRecord::getMessage).anySatisfy(message -> assertThat(message)
+        assertThat(logged).extracting(new SimpleFormatter()::formatMessage).anySatisfy(message -> assertThat(message)
                 .contains("inFlight=2"));
     }
 
