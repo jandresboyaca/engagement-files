@@ -10,6 +10,7 @@ import com.caseware.fanout.application.service.DispatchCycleService;
 import com.caseware.fanout.application.service.MarkDoneService;
 import com.caseware.fanout.application.service.ResumeAfterRestartService;
 import com.caseware.fanout.application.service.SubmitWorkService;
+import com.caseware.fanout.application.service.WorkStatusService;
 import com.caseware.fanout.domain.policy.ConcurrencyLimits;
 import com.caseware.fanout.domain.policy.FairnessPolicy;
 import com.caseware.fanout.domain.policy.RetryPolicy;
@@ -84,5 +85,10 @@ public class FanoutConfiguration {
     MarkDoneService markDoneService(WorkItemRepositoryPort repository, ClockPort clock,
             DomainEventPublisherPort events) {
         return new MarkDoneService(repository, clock, events);
+    }
+
+    @Bean
+    WorkStatusService workStatusService(WorkItemRepositoryPort repository, ClockPort clock) {
+        return new WorkStatusService(repository, clock);
     }
 }
