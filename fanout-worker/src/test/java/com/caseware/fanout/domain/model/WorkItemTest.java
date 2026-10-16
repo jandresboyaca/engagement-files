@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.caseware.fanout.domain.event.WorkItemCompleted;
+import com.caseware.fanout.domain.event.WorkItemParked;
 import com.caseware.fanout.domain.exception.InvalidTransitionException;
 import com.caseware.fanout.domain.policy.RetryPolicy;
 import java.time.Duration;
@@ -169,6 +170,67 @@ class WorkItemTest {
         item.markDone(T0);
 
         assertThatThrownBy(() -> item.claim(T0, LEASE)).isInstanceOf(InvalidTransitionException.class);
+    }
+
+    // Transitions that need RetryPolicy (US3)
+
+    @Test
+    void aRetryableFailureMakesTheItemOutstandingAgainAfterItsDelay() {
+        WorkItem item = inFlight();
+
+        item.answer(new Attempt(1), new LoadOutcome.Answered(503), T0.plusSeconds(60), RETRY);
+
+        assertThat(item.state()).isEqualTo(WorkItemState.OUTSTANDING);
+        assertThat(item.leaseUntil()).isEmpty();
+        assertThat(item.nextAttemptAt()).isEqualTo(T0.plusSeconds(60).plusSeconds(30));
+        assertThat(item.lastError()).contains("HTTP_503");
+        assertThat(item.pullEvents()).isEmpty();
+    }
+
+    @Test
+    void aRetryableFailureAtTheMaximumParksTheItem() {
+        RetryPolicy oneAttempt = new RetryPolicy(1, Duration.ofSeconds(30), Duration.ofMinutes(30));
+        WorkItem item = inFlight();
+
+        item.answer(new Attempt(1), new LoadOutcome.ConnectFailed(), T0.plusSeconds(60), oneAttempt);
+
+        assertThat(item.state()).isEqualTo(WorkItemState.PARKED);
+        assertThat(item.leaseUntil()).isEmpty();
+        assertThat(item.lastError()).contains("CONNECT");
+        assertThat(item.pullEvents()).containsExactly(new WorkItemParked(item.id(), engagement, firm, new Attempt(1),
+                "CONNECT", T0.plusSeconds(60)));
+    }
+
+    @Test
+    void aPermanentFailureParksTheItemAtOnce() {
+        WorkItem item = inFlight();
+
+        item.answer(new Attempt(1), new LoadOutcome.Answered(404), T0.plusSeconds(60), RETRY);
+
+        assertThat(item.state()).isEqualTo(WorkItemState.PARKED);
+        assertThat(item.lastError()).contains("HTTP_404");
+        assertThat(item.pullEvents()).hasSize(1).allMatch(WorkItemParked.class::isInstance);
+    }
+
+    @Test
+    void anExpiredLeaseIsATimeoutFailure() {
+        WorkItem item = inFlight();
+        Instant leaseEnd = T0.plus(LEASE);
+
+        item.expireLease(leaseEnd, RETRY);
+
+        assertThat(item.state()).isEqualTo(WorkItemState.OUTSTANDING);
+        assertThat(item.leaseUntil()).isEmpty();
+        assertThat(item.lastError()).contains("TIMEOUT");
+        assertThat(item.nextAttemptAt()).isEqualTo(leaseEnd.plusSeconds(30));
+    }
+
+    @Test
+    void expiringALeaseBeforeItEndsIsRejected() {
+        WorkItem item = inFlight();
+
+        assertThatThrownBy(() -> item.expireLease(T0.plus(LEASE).minusSeconds(1), RETRY))
+                .isInstanceOf(InvalidTransitionException.class);
     }
 
     @Test
