@@ -13,8 +13,11 @@ import com.caseware.fanout.application.fake.ManualExecutor;
 import com.caseware.fanout.application.fake.RecordingEventPublisher;
 import com.caseware.fanout.application.port.out.WorkItemRepositoryPort;
 import com.caseware.fanout.domain.event.WorkItemCompleted;
+import com.caseware.fanout.domain.event.WorkItemParked;
+import com.caseware.fanout.domain.model.Attempt;
 import com.caseware.fanout.domain.model.EngagementId;
 import com.caseware.fanout.domain.model.FirmId;
+import com.caseware.fanout.domain.model.LoadOutcome;
 import com.caseware.fanout.domain.model.Reason;
 import com.caseware.fanout.domain.model.WorkItem;
 import com.caseware.fanout.domain.model.WorkItemId;
@@ -49,6 +52,26 @@ class DispatchCycleServiceTest {
     private DispatchCycleService service(WorkItemRepositoryPort repository, FakeCapacitySettings settings) {
         return new DispatchCycleService(repository, ems, settings, clock, events, executor, new FairnessPolicy(),
                 LEASE, RETRY);
+    }
+
+    private DispatchCycleService service(WorkItemRepositoryPort repository, FakeCapacitySettings settings,
+            RetryPolicy retry) {
+        return new DispatchCycleService(repository, ems, settings, clock, events, executor, new FairnessPolicy(),
+                LEASE, retry);
+    }
+
+    /** An item in any state, as a previous process may have left it. */
+    private static WorkItem leftBehind(WorkItemRepositoryPort repository, String engagement, WorkItemState state,
+            Instant leaseUntil) {
+        WorkItem item = WorkItem.restore(new WorkItem.Snapshot(WorkItemId.newId(), new EngagementId(engagement),
+                new FirmId("firm-a"), Reason.SWEEP, state, new Attempt(state == WorkItemState.OUTSTANDING ? 0 : 1),
+                T0.minusSeconds(600), T0.minusSeconds(600), leaseUntil, null, 0L));
+        repository.insertIfNoOpenItem(item);
+        return item;
+    }
+
+    private static WorkItem stored(WorkItemRepositoryPort repository, WorkItem item) {
+        return repository.findById(item.id()).orElseThrow();
     }
 
     private static WorkItem add(WorkItemRepositoryPort repository, String engagement, String firm, Instant addedAt) {
@@ -268,6 +291,213 @@ class DispatchCycleServiceTest {
 
         assertThat(roundDone).containsOnlyKeys(smallFirms);
         assertThat(roundDone.values()).allMatch(round -> round <= 9);
+    }
+
+    // US3 scenario 1, FR-011: the delay grows per attempt and other items keep being loaded meanwhile
+    @Test
+    void aRetryableFailureWaitsForItsBackoffWhileOtherItemsKeepLoading() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem bad = add(repository, "bad", "firm-a", T0.minusSeconds(10));
+        WorkItem ok1 = add(repository, "ok-1", "firm-a", T0.minusSeconds(9));
+        WorkItem ok2 = add(repository, "ok-2", "firm-a", T0.minusSeconds(8));
+        ems.script(bad.engagementId(), new LoadOutcome.Answered(503));
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(1, 1)));
+
+        service.runOnce();
+        executor.runAll();
+        assertThat(stored(repository, bad).state()).isEqualTo(WorkItemState.OUTSTANDING);
+        assertThat(stored(repository, bad).nextAttemptAt()).isEqualTo(T0.plusSeconds(30));
+        assertThat(stored(repository, bad).lastError()).contains("HTTP_503");
+
+        service.runOnce();
+        executor.runAll();
+        service.runOnce();
+        executor.runAll();
+        assertThat(stored(repository, ok1).state()).isEqualTo(WorkItemState.DONE);
+        assertThat(stored(repository, ok2).state()).isEqualTo(WorkItemState.DONE);
+
+        clock.advance(Duration.ofSeconds(30));
+        service.runOnce();
+        executor.runAll();
+        assertThat(stored(repository, bad).attempt()).isEqualTo(new Attempt(2));
+        assertThat(stored(repository, bad).nextAttemptAt()).isEqualTo(T0.plusSeconds(30 + 60));
+        assertThat(ems.calls()).extracting(EngagementId::value).containsExactly("bad", "ok-1", "ok-2", "bad");
+    }
+
+    // US3 scenario 1, FR-009: no answer before the lease ends is a timeout, handled by step 1
+    @Test
+    void aLoadWithNoAnswerBeforeItsLeaseEndsIsATimeoutAndIsRetried() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem item = add(repository, "eng-1", "firm-a", T0);
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(1, 1)));
+        service.runOnce();
+
+        clock.advance(LEASE);
+        DispatchResult expiry = service.runOnce();
+
+        assertThat(expiry.leasesExpired()).isEqualTo(1);
+        assertThat(expiry.loadsStarted()).isZero();
+        assertThat(stored(repository, item).state()).isEqualTo(WorkItemState.OUTSTANDING);
+        assertThat(stored(repository, item).lastError()).contains("TIMEOUT");
+        assertThat(stored(repository, item).nextAttemptAt()).isEqualTo(T0.plus(LEASE).plusSeconds(30));
+
+        clock.advance(Duration.ofSeconds(30));
+        assertThat(service.runOnce().loadsStarted()).isEqualTo(1);
+        executor.runNext();
+        assertThat(stored(repository, item).state()).as("the late answer to attempt 1 is ignored")
+                .isEqualTo(WorkItemState.IN_FLIGHT);
+        assertThat(stored(repository, item).attempt()).isEqualTo(new Attempt(2));
+    }
+
+    // US3 scenario 2: parked after the maximum, stops taking a slot, visible with its last error
+    @Test
+    void afterTheMaximumAttemptsAnItemIsParkedAndStopsTakingASlot() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem bad = add(repository, "bad", "firm-a", T0);
+        ems.script(bad.engagementId(), new LoadOutcome.Answered(503));
+        RetryPolicy threeAttempts = new RetryPolicy(3, Duration.ofSeconds(30), Duration.ofMinutes(30));
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(1, 1)),
+                threeAttempts);
+
+        for (int round = 0; round < 5; round++) {
+            service.runOnce();
+            executor.runAll();
+            clock.advance(Duration.ofMinutes(30));
+        }
+
+        assertThat(ems.callsFor(bad.engagementId())).isEqualTo(3);
+        assertThat(stored(repository, bad).state()).isEqualTo(WorkItemState.PARKED);
+        assertThat(stored(repository, bad).lastError()).contains("HTTP_503");
+        assertThat(events.events()).filteredOn(WorkItemParked.class::isInstance).hasSize(1);
+        assertThat(repository.status(clock.now()).countsByState()).containsEntry(WorkItemState.PARKED, 1L);
+
+        WorkItem next = add(repository, "next", "firm-a", clock.now());
+        assertThat(service.runOnce().loadsStarted()).isEqualTo(1);
+        assertThat(stored(repository, next).state()).isEqualTo(WorkItemState.IN_FLIGHT);
+    }
+
+    // US3 scenario 3
+    @Test
+    void aPermanentFailureIsParkedWithoutRetry() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem missing = add(repository, "missing", "firm-a", T0);
+        ems.script(missing.engagementId(), new LoadOutcome.Answered(404));
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(1, 1)));
+
+        service.runOnce();
+        executor.runAll();
+        clock.advance(Duration.ofHours(1));
+        service.runOnce();
+        executor.runAll();
+
+        assertThat(ems.callsFor(missing.engagementId())).isEqualTo(1);
+        assertThat(stored(repository, missing).state()).isEqualTo(WorkItemState.PARKED);
+        assertThat(stored(repository, missing).lastError()).contains("HTTP_404");
+    }
+
+    // FR-009: an overload answer is a retryable failure
+    @Test
+    void overloadAnswersAreRetryable() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem busy = add(repository, "busy", "firm-a", T0.minusSeconds(2));
+        WorkItem throttled = add(repository, "throttled", "firm-a", T0.minusSeconds(1));
+        ems.script(busy.engagementId(), new LoadOutcome.Answered(503));
+        ems.script(throttled.engagementId(), new LoadOutcome.Answered(429));
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(2, 2)));
+
+        service.runOnce();
+        executor.runAll();
+
+        assertThat(List.of(stored(repository, busy), stored(repository, throttled)))
+                .allMatch(item -> item.state() == WorkItemState.OUTSTANDING)
+                .allMatch(item -> item.nextAttemptAt().equals(T0.plusSeconds(30)));
+        assertThat(stored(repository, throttled).lastError()).contains("HTTP_429");
+    }
+
+    // Spec edge case: a firm whose items are all parked does not affect other firms
+    @Test
+    void aFirmWhoseItemsAreAllParkedDoesNotAffectOtherFirms() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        for (int i = 0; i < 3; i++) {
+            WorkItem missing = add(repository, "x-" + i, "firm-x", T0.minusSeconds(10 - i));
+            ems.script(missing.engagementId(), new LoadOutcome.Answered(404));
+            add(repository, "y-" + i, "firm-y", T0.minusSeconds(5 - i));
+        }
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(2, 2)));
+
+        for (int round = 0; round < 6; round++) {
+            service.runOnce();
+            executor.runAll();
+        }
+
+        Map<FirmId, Map<WorkItemState, Long>> byFirm = repository.status(clock.now()).countsByFirm();
+        assertThat(byFirm.get(new FirmId("firm-x"))).isEqualTo(Map.of(WorkItemState.PARKED, 3L));
+        assertThat(byFirm.get(new FirmId("firm-y"))).isEqualTo(Map.of(WorkItemState.DONE, 3L));
+    }
+
+    // FR-015, US4 scenario 2: a new service over the same work list stands for a restarted process
+    @Test
+    void afterARestartAnItemLeftInFlightIsLoadedOnceMoreAfterItsLeaseAndUnexpiredLeasesKeepTheirSlots() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem expired = leftBehind(repository, "expired", WorkItemState.IN_FLIGHT, T0.minusSeconds(1));
+        WorkItem live = leftBehind(repository, "live", WorkItemState.IN_FLIGHT, T0.plusSeconds(60));
+        WorkItem doneLive = leftBehind(repository, "done-live", WorkItemState.DONE, T0.plusSeconds(60));
+        WorkItem waiting = leftBehind(repository, "waiting", WorkItemState.OUTSTANDING, null);
+        DispatchCycleService restarted = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(2, 2)));
+
+        DispatchResult first = restarted.runOnce();
+        assertThat(first.leasesExpired()).isEqualTo(1);
+        assertThat(first.loadsStarted()).as("both unexpired leases still hold a slot").isZero();
+
+        clock.set(T0.plusSeconds(60));
+        DispatchResult second = restarted.runOnce();
+        assertThat(second.leasesExpired()).isEqualTo(1);
+        assertThat(second.loadsStarted()).isEqualTo(2);
+        executor.runAll();
+        clock.set(T0.plusSeconds(90));
+        restarted.runOnce();
+        executor.runAll();
+
+        assertThat(ems.callsFor(expired.engagementId())).isEqualTo(1);
+        assertThat(ems.callsFor(live.engagementId())).isEqualTo(1);
+        assertThat(ems.callsFor(waiting.engagementId())).isEqualTo(1);
+        assertThat(ems.callsFor(doneLive.engagementId())).isZero();
+        assertThat(List.of(expired, live, waiting)).allMatch(item -> stored(repository, item).state() == WorkItemState.DONE);
+    }
+
+    // Regression check (tasks.md T030), expected to pass on its first run: US4 scenario 1
+    @Test
+    void regressionCheck_afterARestartDoneItemsAreNeverLoadedAgain() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem done = leftBehind(repository, "done", WorkItemState.DONE, null);
+        DispatchCycleService restarted = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(2, 2)));
+
+        for (int round = 0; round < 3; round++) {
+            restarted.runOnce();
+            executor.runAll();
+            clock.advance(Duration.ofMinutes(10));
+        }
+
+        assertThat(ems.callsFor(done.engagementId())).isZero();
+    }
+
+    // Regression check (tasks.md T030), expected to pass on its first run: US4 scenario 3
+    @Test
+    void regressionCheck_afterARestartOutstandingItemsAreAllLoaded() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        List<WorkItem> waiting = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            waiting.add(leftBehind(repository, "waiting-" + i, WorkItemState.OUTSTANDING, null));
+        }
+        DispatchCycleService restarted = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(2, 2)));
+
+        for (int round = 0; round < 3; round++) {
+            restarted.runOnce();
+            executor.runAll();
+        }
+
+        assertThat(waiting).allMatch(item -> stored(repository, item).state() == WorkItemState.DONE);
+        assertThat(ems.calls()).hasSize(5);
     }
 
     /** Lets a test act between the service's reads and writes, as another component would. */
