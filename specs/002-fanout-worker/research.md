@@ -153,6 +153,15 @@ deterministic.
 - *Adaptive slow-down on overload.* Out of scope (spec, Open Question 1).
 - *Classification in the HTTP adapter.* Puts a retry rule outside the domain, where the unit tests
   with fakes cannot reach it.
+- *Resilience4j Retry or Spring's `@Retryable`.* The retry waits in memory inside the call: it holds
+  an EMS slot during the backoff, loses its attempts on a crash, lets a retrying item skip ahead
+  of other firms, and cannot live in the plain-Java domain. A circuit breaker from the same
+  library is future work, tied to pausing during an EMS outage, which is out of scope.
+- *A broker queue with delayed redelivery (Spring Cloud Stream on SQS, RabbitMQ or Kafka).* The
+  binder's own retry is in memory too, and a queue cannot give the per-firm cap and fairness
+  (FR-005, FR-006), one open item per engagement beyond a short deduplication window (FR-013),
+  marking an item done from outside (FR-003) or counts per firm (FR-016). A Spring Cloud Stream
+  listener calling `SubmitWorkUseCase` remains the natural inbound adapter (§7), out of scope here.
 
 **Relies on**: spec FR-009 to FR-011, Open Question 1 and Out of Scope; the status codes are our
 own assumption, written in contracts/ems-load-api.yaml, because another team owns the API. No reference book or reference scenario from the constitution was consulted for this decision.
