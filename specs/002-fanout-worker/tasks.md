@@ -126,7 +126,7 @@ it would take alone (spec US2).
 
 ### Implementation for User Story 2
 
-- [ ] T027 [US2] Make `J/domain/policy/FairnessPolicy.java` fair (research §3) to pass T025 and T026; T017 and T018 stay green. `DispatchCycleService` does not change.
+- [X] T027 [US2] Make `J/domain/policy/FairnessPolicy.java` fair (research §3) to pass T025 and T026; T017 and T018 stay green. `DispatchCycleService` does not change.
 
 **Checkpoint**: US1 and US2 pass together.
 
