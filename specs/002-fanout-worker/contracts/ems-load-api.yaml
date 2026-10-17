@@ -1,0 +1,40 @@
+# ASSUMPTION. This API belongs to the Engagement Management System team, not to us.
+# The take-home brief says only that loading an engagement takes ~1 minute and that hooks can be
+# added to EMS actions. The path, headers and status codes below are what the downstream adapter
+# will call until the EMS team confirms or replaces them. Only the adapter
+# (adapter/out/downstream) depends on this file; changing it changes no other layer.
+openapi: 3.1.0
+info:
+  title: Engagement Management System - load engagement (assumed)
+  version: 0.1.0-assumed
+paths:
+  /firms/{firmId}/engagements/{engagementId}/load:
+    post:
+      operationId: loadEngagement
+      summary: Load one engagement so EMS reports its current template version.
+      description: >
+        Synchronous. Returns when the load has finished (~1 minute). The caller does not read
+        the engagement content; what the load found is recorded by another component.
+      parameters:
+        - name: firmId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+        - name: engagementId
+          in: path
+          required: true
+          schema: { type: string, maxLength: 64 }
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: The work item id. EMS may use it to ignore a repeated request; the worker does not rely on it.
+          schema: { type: string, format: uuid }
+      responses:
+        '200': { description: Loaded. }
+        '204': { description: Loaded. }
+        '400': { description: Bad request. Permanent. }
+        '404': { description: Firm or engagement unknown. Permanent. }
+        '410': { description: Engagement removed. Permanent. }
+        '429': { description: Overloaded. Retryable. }
+        '503': { description: Overloaded or unavailable. Retryable. }
+        default: { description: Other 5xx retryable; other 4xx permanent. }
