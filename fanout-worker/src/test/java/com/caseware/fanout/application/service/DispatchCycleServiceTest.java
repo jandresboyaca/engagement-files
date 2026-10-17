@@ -1,6 +1,7 @@
 package com.caseware.fanout.application.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import com.caseware.fanout.application.dto.DispatchResult;
 import com.caseware.fanout.application.dto.SubmitResult;
@@ -36,6 +37,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.logging.Handler;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 import org.junit.jupiter.api.Test;
 
 class DispatchCycleServiceTest {
@@ -332,6 +338,47 @@ class DispatchCycleServiceTest {
 
         assertThat(firstSlot).as("round of the small firm's first slot").isBetween(1, perSlot);
         assertThat(roundDone).as("round the small firm finished").isBetween(1, bound);
+    }
+
+    // Review M9: an unexpected failure inside a load task is logged with opaque ids, not left to stderr
+    @Test
+    void anUnexpectedFailureInsideALoadTaskIsLoggedWithOpaqueIdsAndLeftForTheLease() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        WorkItem item = add(repository, "eng-1", "firm-a", T0);
+        DispatchCycleService service = new DispatchCycleService(repository, (id, firm, engagement) -> {
+            throw new IllegalStateException("response from EMS: engagement title");
+        }, new FakeCapacitySettings(new ConcurrencyLimits(1, 1)), clock, events, executor, new FairnessPolicy(),
+                LEASE, RETRY);
+        service.runOnce();
+        Logger logger = Logger.getLogger(DispatchCycleService.class.getName());
+        List<LogRecord> logged = new ArrayList<>();
+        Handler handler = new Handler() {
+            @Override
+            public void publish(LogRecord record) {
+                logged.add(record);
+            }
+
+            @Override
+            public void flush() {
+            }
+
+            @Override
+            public void close() {
+            }
+        };
+        logger.addHandler(handler);
+        try {
+            assertThatNoException().isThrownBy(executor::runNext);
+        } finally {
+            logger.removeHandler(handler);
+        }
+
+        assertThat(logged).filteredOn(record -> record.getLevel() == Level.WARNING)
+                .extracting(new SimpleFormatter()::formatMessage)
+                .containsExactly("load task for workItemId=" + item.id().value()
+                        + " attempt=1 failed with java.lang.IllegalStateException; its lease will expire");
+        assertThat(stored(repository, item).state()).isEqualTo(WorkItemState.IN_FLIGHT);
+        assertThat(stored(repository, item).leaseUntil()).contains(T0.plus(LEASE));
     }
 
     // US3 scenario 1, FR-011: the delay grows per attempt and other items keep being loaded meanwhile

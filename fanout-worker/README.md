@@ -58,5 +58,5 @@ The load API in `specs/002-fanout-worker/contracts/ems-load-api.yaml` is assumed
 ## Known warnings
 
 - Build: Maven prints two `401` metadata warnings for repositories in Flyway's parent POM, and the test JVM prints the Byte Buddy agent notice. Both are harmless.
-- Tests and compose: some WARN lines are on purpose (save-conflict give-ups and invalid-configuration startups). The PostgreSQL image prints initdb notices about locales and "trust" authentication.
+- Tests and compose: some WARN lines are on purpose (save-conflict give-ups, a failed load task and invalid-configuration startups). The PostgreSQL image prints initdb notices about locales and "trust" authentication.
 - Local seed: it is migration `V100`, used only by the `local` profile. On a database that has applied it, a later migration numbered below 100 is out of order and Flyway refuses it until the database is recreated.

@@ -105,7 +105,15 @@ public final class DispatchCycleService implements RunDispatchCycleUseCase {
         WorkItemId id = claimed.id();
         Attempt attempt = claimed.attempt();
         FirmId firm = claimed.firmId();
-        executor.execute(() -> recordAnswer(id, attempt, ems.load(id, firm, claimed.engagementId())));
+        executor.execute(() -> {
+            try {
+                recordAnswer(id, attempt, ems.load(id, firm, claimed.engagementId()));
+            } catch (RuntimeException unexpected) {
+                // The exception's message may carry engagement content (Principle II): log its type only.
+                LOG.log(Level.WARNING, "load task for workItemId={0} attempt={1} failed with {2}; its lease will expire",
+                        id.value(), attempt.count(), unexpected.getClass().getName());
+            }
+        });
     }
 
     private void recordAnswer(WorkItemId id, Attempt attempt, LoadOutcome outcome) {
