@@ -283,5 +283,7 @@ Polish, validating with `./mvnw verify` at every checkpoint.
 
 - Out of scope and deliberately absent: REST endpoints, broker, cloud SDK, infrastructure code,
   Kubernetes, CI, metrics stack, the components that add work or record results, adaptive
-  slow-down, pausing during an outage, several instances, an operator interface, README.
+  slow-down, pausing during an outage, several instances, an operator interface.
+- `fanout-worker/README.md` was not a task: it was written after T045, on request, and lists
+  the accepted warnings T045 refers to.
 - Commit after each GREEN task or logical group.
