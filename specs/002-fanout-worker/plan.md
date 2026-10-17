@@ -37,8 +37,9 @@ with docker compose
 **Project Type**: Background worker (no web server, no endpoint)
 
 **Performance Goals**: sustain C concurrent one-minute loads, with C in the tens [D: ~19 for a
-30-day backfill, 50 for a publish]; a dispatch cycle (period 1 s) costs a few queries
-independent of backlog size
+30-day backfill, 50 for a publish]; a dispatch cycle (period 1 s) costs a few queries. Corrected
+after review (I3): one of them, `findFirmsWithDueWork`, reads every outstanding row, because
+`next_attempt_at` is not in `ix_work_item_due`, so its cost grows with the backlog (research §6)
 
 **Constraints**: never more than C loads in flight in total or F per firm, including across a
 restart; no test waits a real minute; logs carry opaque ids only

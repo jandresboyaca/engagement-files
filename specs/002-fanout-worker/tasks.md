@@ -22,6 +22,25 @@ description: "Task list for the template-publish fan-out worker"
 - Regression checks by decision, not RED tests: T034 `RestartScenarioIT`, written after the
   restart behaviour exists (its RED cases are in T030), and the two cases in T030 marked as
   regression checks.
+- Deviations from the rules above, found in review (I1). The history shows them as they are; it
+  is not rewritten.
+  - Compile errors instead of assertion failures: the test commits T005, T006, T009, T011, T014,
+    T016, T017, T018, T019, T028 and T029 do not compile at their own commit, because the stub
+    they needed was not committed with them. T012 (migrations) does not compile either, as it
+    sits between T011 and T013. T018's message says "RED against a stub service", but no stub
+    existed at that commit.
+  - Order: T030 (`7e79cd3`) and T031 (`4c92d50`) were committed after T032 (`c30cf99`), which
+    implements part of what they test. At its own commit T030 has 2 failing cases (the lease
+    timeout and the restart case) and 5 passing, although its message says 7 of 7 failed. T031's
+    3 tests pass at its own commit, although its message says 3 of 3 failed before T032 and T033.
+    Their RED claims cannot be checked from the history.
+  - No separate RED commit: `0edab0a` (markDone save conflict) and the fixes made after review
+    add the test and the fix in one commit; the RED result is recorded in each commit message.
+  - Regression check, not RED: the concurrent-submit case in `JdbcWorkItemRepositoryIT` (review
+    M5) passed on its first run; it fails against an adapter deliberately broken to return the
+    wrong id.
+  - No behaviour change: `7ea6a75` (persistence on Spring Data JDBC) and the two `refactor:`
+    commits rely on the existing tests, the repository contract test for the first.
 
 **Organization**: Tasks are grouped by user story. Paths are relative to the repository root;
 `J` = `fanout-worker/src/main/java/com/caseware/fanout`, `T` =

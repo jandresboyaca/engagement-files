@@ -25,6 +25,7 @@ In WSL, `JAVA_HOME` must point to a Linux JDK 21, for example `export JAVA_HOME=
 - `docker compose --profile app up --build` starts PostgreSQL, WireMock on `localhost:8089` and the worker. A seed adds 16 items for three firms, including `eng-missing` (404, parked) and `eng-flaky` (503 twice, then 204). From another terminal:
   - `docker compose exec postgres psql -U fanout -d fanout -c "select state, count(*) from work_item group by state"`
   - `docker compose exec postgres psql -U fanout -d fanout -c "update capacity_settings set per_firm_limit = 1"`
+  - `docker compose exec postgres psql -U fanout -d fanout -c "update capacity_settings set global_limit = 0, per_firm_limit = 0"` pauses dispatch. Both must be 0, since the per-firm limit cannot exceed the global one.
   - `docker compose --profile app down` removes the containers.
 
 ## Key tradeoffs
@@ -45,11 +46,13 @@ In WSL, `JAVA_HOME` must point to a Linux JDK 21, for example `export JAVA_HOME=
 
 ## Assumptions about EMS
 
-The load API in `specs/002-fanout-worker/contracts/ems-load-api.yaml` is assumed. The EMS team owns the real API, which is not known; WireMock is a stand-in. The load timeout (5 min) must be longer than the slowest real load, or a load still running counts as failed and EMS runs it twice.
+The load API in `specs/002-fanout-worker/contracts/ems-load-api.yaml` is assumed. The EMS team owns the real API, which is not known; WireMock is a stand-in. The load timeout (5 min) must be longer than the slowest real load, or a load still running counts as failed and EMS runs it twice. A connection reset after sending, or a 502 or 504 from a gateway, frees the slot at once and is retried; if EMS was still running that load, it briefly sees more than C.
 
 ## Left out on purpose
 
-- **One instance per region.** Two instances could count the same free slots and exceed C. Several instances would need claims with `FOR UPDATE SKIP LOCKED` or similar.
+- **One instance per region.** Two instances could count the same free slots and exceed C, including during a rolling redeploy. Deploy stop-then-start (for example Kubernetes `Recreate`). The next step is a PostgreSQL advisory lock held by the dispatcher; several instances would also need claims with `FOR UPDATE SKIP LOCKED` or similar.
+- **A trigger during a load.** Re-adding an engagement whose load is running creates nothing (US5 scenario 1), so a publish that arrives during that load is not followed by another load. A "load again afterwards" flag on the item would close this.
+- **Cycle cost.** Each cycle reads every outstanding row to find the firms with due work, so its cost grows with the backlog. Production would need one index probe per firm or a per-firm summary.
 - **No circuit breaker.** With backoff of 30, 60, 120, 240 and 480 s, an item that keeps failing fast for about 16 minutes is parked, so a long EMS outage parks every item first tried more than 16 minutes before EMS recovers. Production would pause dispatch while EMS is down.
 - **No metrics stack.** Events are log lines. After every 60th cycle the scheduler logs one `status` line with counts per state and per firm, loads in flight and the oldest outstanding age (FR-016). Production would export these as metrics.
 - **No inbound API.** Only tests and the local seed create work. Production would add an event-listener adapter for the triggers.

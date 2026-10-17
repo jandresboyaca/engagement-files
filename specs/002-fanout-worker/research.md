@@ -53,7 +53,10 @@ claim between the count and the claim. Loads run as blocking calls on Java 21 vi
 **Cost accepted**: one indexed count query per cycle (cycle period ~1 s, see §6). Correctness
 relies on a single dispatcher, which the spec assumes (one instance per region; several instances
 are out of scope). Moving to several instances would need claims with `FOR UPDATE SKIP LOCKED`
-and a count inside the same transaction.
+and a count inside the same transaction. Nothing enforces the single dispatcher, so a rolling
+redeploy, where old and new processes overlap, could exceed C (review I2): the worker is deployed
+stop-then-start (for example Kubernetes `Recreate`). The next step is a PostgreSQL advisory lock
+held by the dispatcher, so a second process skips its cycles.
 
 **Virtual threads, not reactive**: the load is ~19 to 50 concurrent one-minute calls [D: "about
 19 loads in flight" for a 30-day backfill; "6.7 h at 50 concurrent"]. The scarce resource is the
@@ -156,6 +159,11 @@ Defaults: base 30 s, max 30 min, 6 attempts (configuration, agreed with the EMS 
 stores only an error code (`TIMEOUT`, `HTTP_503`, `CONNECT`), never a response body (Principle II).
 A failed item waits by `next_attempt_at`, so it never blocks other items (FR-011).
 
+**Known gap (review M1)**: a failure that does not prove the load stopped, such as a connection
+reset after the request was sent or a 502 or 504 from a gateway, frees the slot at once and is
+retried after its backoff. If EMS was still running that load, it briefly sees more than C.
+Clarification 2 would keep the slot until the original lease end; this is not done.
+
 **Reason**: exponential backoff spreads retries of a struggling EMS; the cap C already bounds how
 many retries can hit EMS at once, so jitter is not needed for safety and is left out to keep tests
 deterministic.
@@ -246,7 +254,11 @@ built in Java. `capacity_settings` goes through a `CrudRepository`. Key constrai
 - Terminal rows are kept; purging is out of scope (data-model.md).
 
 Dispatch cycle period: 1 s (configuration). The cycle does two to three queries plus one per firm
-receiving slots, at most C, so its cost is independent of the 800,000-row backlog.
+receiving slots, at most C. Corrected after review (I3): the cost is not independent of the
+backlog. `findFirmsWithDueWork` groups the due outstanding rows by firm, and `next_attempt_at` is
+not in `ix_work_item_due`, so every outstanding row is read each cycle; with an 800,000-row backlog
+that is a full partial scan per second. Future work: one index probe per firm (a loose index scan
+over the distinct `firm_id` values) or a per-firm summary table; no migration is added now.
 
 **Reason**: the spec needs durable state across restarts, a uniqueness rule, and conditional
 updates. A relational table gives all three and is the stack in the constitution and the Part 1
