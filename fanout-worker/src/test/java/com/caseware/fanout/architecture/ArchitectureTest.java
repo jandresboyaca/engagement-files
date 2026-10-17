@@ -31,11 +31,12 @@ class ArchitectureTest {
             classes().that().resideInAPackage(APPLICATION)
                     .should().onlyDependOnClassesThat().resideInAnyPackage("java..", DOMAIN, APPLICATION);
 
+    /** Lombok is not listed: its annotations do not survive compilation, so a bytecode rule cannot see them. */
     @ArchTest
     static final ArchRule domain_and_application_use_no_framework_or_jdbc =
             noClasses().that().resideInAnyPackage(DOMAIN, APPLICATION)
                     .should().dependOnClassesThat().resideInAnyPackage(
-                            "org.springframework..", "lombok..", "org.mapstruct..", "java.sql..", "javax.sql..");
+                            "org.springframework..", "org.mapstruct..", "java.sql..", "javax.sql..");
 
     @ArchTest
     static final ArchRule adapters_do_not_depend_on_services_or_config =

@@ -14,7 +14,7 @@ com.caseware.fanout
 └── config        wiring and properties
 ```
 
-`ArchitectureTest` enforces the rule: domain uses only `java.*`, application only `java.*` and domain, and neither uses Spring, Lombok, MapStruct or JDBC. Adapters do not depend on services, config or each other; only config wires them together.
+`ArchitectureTest` enforces the rule: domain uses only `java.*`, application only `java.*` and domain, and neither uses Spring, MapStruct or JDBC. Lombok stays out of both by convention, since ArchUnit cannot see its annotations. Adapters do not depend on services, config or each other; only config wires them together.
 
 ## How to run
 
