@@ -293,6 +293,47 @@ class DispatchCycleServiceTest {
         assertThat(roundDone.values()).allMatch(round -> round <= 9);
     }
 
+    // FR-006 with more firms than C (review C1): the small firm's wait depends on how many firms have
+    // work, not on the size of their backlogs
+    @Test
+    void aSmallFirmAddedBehindManyOlderFirmsGetsItsFirstSlotAndFinishesWithinItsFairShare() {
+        FakeWorkItemRepository repository = new FakeWorkItemRepository();
+        int olderFirms = 100;
+        for (int f = 0; f < olderFirms; f++) {
+            for (int i = 0; i < 100; i++) {
+                add(repository, "old-" + f + "-" + i, "old-" + f, T0.minusSeconds(100_000 - f * 100L - i));
+            }
+        }
+        DispatchCycleService service = service(repository, new FakeCapacitySettings(new ConcurrencyLimits(20, 5)));
+        service.runOnce();
+        executor.runAll();
+
+        FirmId small = new FirmId("firm-small");
+        for (int i = 0; i < 20; i++) {
+            add(repository, "small-" + i, small.value(), T0.minusSeconds(20 - i));
+        }
+        int perSlot = (olderFirms + 1 + 19) / 20; // ceil(N / C) rounds
+        int bound = 20 * perSlot; // n items x ceil(N / C) rounds
+
+        int firstSlot = 0;
+        int roundDone = 0;
+        for (int round = 1; round <= bound + 5 && roundDone == 0; round++) {
+            service.runOnce();
+            if (firstSlot == 0 && repository.countInFlight(clock.now()).perFirm().containsKey(small)) {
+                firstSlot = round;
+            }
+            executor.runAll();
+            long done = repository.status(clock.now()).countsByFirm().getOrDefault(small, Map.of())
+                    .getOrDefault(WorkItemState.DONE, 0L);
+            if (done == 20) {
+                roundDone = round;
+            }
+        }
+
+        assertThat(firstSlot).as("round of the small firm's first slot").isBetween(1, perSlot);
+        assertThat(roundDone).as("round the small firm finished").isBetween(1, bound);
+    }
+
     // US3 scenario 1, FR-011: the delay grows per attempt and other items keep being loaded meanwhile
     @Test
     void aRetryableFailureWaitsForItsBackoffWhileOtherItemsKeepLoading() {

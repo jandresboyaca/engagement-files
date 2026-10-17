@@ -106,22 +106,33 @@ its documentation in this session. No reference book or reference scenario from 
 ## 3. Fairness between firms (FR-005, FR-006)
 
 **Decision**: Each cycle the repository returns one row per firm with due outstanding work: the
-firm id and the time its oldest due item was added. `FairnessPolicy` (pure domain) hands out the
+firm id and the time its oldest due item was added. `FairnessPolicy` (domain) hands out the
 free global slots one at a time, always to the firm with the fewest loads in flight (counting
-slots given in this cycle), skipping firms at F; ties go to the firm whose oldest due item has
-waited longest. The repository then returns each chosen firm's oldest due items, up to its
-allocation, oldest first (planning request: oldest first within a firm). The reason (activation,
-publish, sweep) is not used (Clarification 3).
+slots given in this cycle), skipping firms at F; ties go to the firm served least recently, then
+to the firm whose oldest due item has waited longest. When each firm was last served is kept in
+memory by the policy and starts empty after a restart. The repository then returns each chosen
+firm's oldest due items, up to its allocation, oldest first (planning request: oldest first within
+a firm). The reason (activation, publish, sweep) is not used (Clarification 3).
 
-**Reason**: a firm with no loads in flight always ranks ahead of a firm holding F, so a newly
-added small firm gets the next free slot regardless of the large firm's backlog (US2 scenario 2,
-SC-002). The wait is bounded by one load duration plus its own ⌈n / F⌉ rounds. A single firm is
-still capped at F (US2 scenario 3).
+**Reason**: a firm with no loads in flight always ranks ahead of a firm holding loads, and a firm
+not served yet ranks ahead of every firm already served. With N firms having due work, every firm
+is served at least once every ⌈N / C⌉ rounds (one round is one load duration), up to F at once
+when fewer firms compete. A firm with n items therefore finishes within about n × ⌈N / C⌉ rounds,
+and within ⌈n / F⌉ + 1 rounds when N × F ≤ C (SC-002). The bound depends on how many firms have
+work, never on the size of their backlogs (FR-006). A single firm is still capped at F (US2
+scenario 3).
+
+**Corrected after review (C1)**: the first version broke ties by the oldest due item only. With
+more firms than C having work, the older firms kept winning the tie and a new firm waited until
+fewer than about C of them were left, so its wait grew with their backlogs. The earlier bound,
+"one load duration plus its own ⌈n / F⌉ rounds", held only for one large firm (the SC-002 test).
+`FairnessPolicyTest` and `DispatchCycleServiceTest` now cover more firms than C.
 
 **Rejected alternatives**:
 - *Arrival order (FIFO across firms).* The ~40,000-engagement firm holds every slot for days.
-- *Round robin with a cursor.* Also fair, but the cursor is state that must survive restarts; the
-  least-loaded rule is stateless and gives the same bound.
+- *Round robin with a cursor.* Also fair, but a cursor alone ignores loads in flight. The
+  least-served tie-break gives the same rotation among firms with nothing in flight; its state is
+  in memory only, and losing it at a restart costs at most one more rotation.
 - *Weighted fair queuing by firm size.* Unneeded; the spec asks for a bounded wait, not
   proportional shares.
 
