@@ -97,7 +97,9 @@ docker compose and in tests, and an agreed lower limit for EMS survives a restar
 - *Watching a file.* Custom code for something the database already gives us.
 
 **Cost accepted**: a fifth outbound port (D2). Note for operators: once the row exists,
-configuration changes to C and F are ignored until the row is updated or deleted.
+configuration changes to C and F are ignored; change the row with `UPDATE`. The row is inserted
+only at startup: deleting it while the worker runs makes every cycle fail and start nothing until
+the worker restarts and inserts it again from configuration (corrected after review, M6).
 
 **Relies on**: spec FR-007 and SC-006; the planning request (no endpoint, no Spring Cloud). That
 `@ConfigurationProperties` are bound once is prior knowledge of Spring Boot, not checked against

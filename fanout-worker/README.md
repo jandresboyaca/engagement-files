@@ -35,13 +35,13 @@ In WSL, `JAVA_HOME` must point to a Linux JDK 21, for example `export JAVA_HOME=
 
 **Fairness plus a strict per-firm cap F.** Free slots go one at a time to the firm with the fewest loads in flight, skipping firms at F. Ties go to the firm served least recently (kept in memory, reset on restart), then to the oldest item; within a firm, oldest first. Given up: shares by firm size, priority by reason, and idle capacity when only one firm has work. Why: with N firms having work, each gets a slot at least once every ⌈N / C⌉ load durations, whatever the other firms' backlogs, and no firm takes all of C.
 
-**C and F in a `capacity_settings` table.** The row is created from configuration if missing, and every cycle reads it, so a SQL `UPDATE` applies on the next cycle. Given up: once the row exists, configuration changes are ignored. Why: properties are bound once, and a limit agreed with EMS should survive a restart. The defaults 20 and 5 are placeholders.
+**C and F in a `capacity_settings` table.** At startup the row is created from configuration if missing, and every cycle reads it, so a SQL `UPDATE` applies on the next cycle. Given up: once the row exists, configuration changes are ignored. Why: properties are bound once, and a limit agreed with EMS should survive a restart. The defaults 20 and 5 are placeholders.
 
 **Spring Data JDBC, not JPA.** One flat table, updates conditional on `@Version`, and a partial unique index for one open item per engagement. Given up: JPA's mapping features. Why: JDBC runs exactly the statement asked for, with no persistence context to reason about.
 
 **Blocking calls on virtual threads, not reactive.** Each load is a blocking `RestClient` call on its own virtual thread, holding no database connection. Given up: WebClient and R2DBC. Why: the limit is EMS capacity, not threads, and reactive types would spread into the application layer.
 
-**Test commits before their implementation.** Each task's tests were committed first and shown failing. Given up: a history where every commit builds. 12 of the 50 commits, all between T005 and T029, do not compile, because their tests use classes added later. Why: each failing test is recorded before the code that makes it pass.
+**Test commits before their implementation.** Each task's tests were committed first and shown failing. Given up: a history where every commit builds. 12 commits, all between T005 and T029, do not compile, because their tests use classes added later. Why: each failing test is recorded before the code that makes it pass.
 
 ## Assumptions about EMS
 
