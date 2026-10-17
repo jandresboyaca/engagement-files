@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.caseware.fanout.config.FanoutProperties;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -49,6 +51,21 @@ class FanoutWorkerApplicationIT {
 	@Test
 	void aNegativeLimitStopsStartup() {
 		properties.withPropertyValues("fanout.limits.global=-1", "fanout.limits.per-firm=-1")
+				.run(context -> assertThat(context).hasFailed());
+	}
+
+	// Review M2: durations must be positive, and the backoff cap at least its base
+	@ParameterizedTest
+	@ValueSource(strings = { "fanout.load.timeout=0s", "fanout.load.timeout=-1s", "fanout.load.lease-grace=0s",
+			"fanout.load.connect-timeout=0s", "fanout.retry.base-delay=0s", "fanout.retry.max-delay=0s",
+			"fanout.dispatch.period=0s" })
+	void aZeroOrNegativeDurationStopsStartup(String property) {
+		properties.withPropertyValues(property).run(context -> assertThat(context).hasFailed());
+	}
+
+	@Test
+	void aMaxDelayBelowTheBaseDelayStopsStartup() {
+		properties.withPropertyValues("fanout.retry.base-delay=1m", "fanout.retry.max-delay=30s")
 				.run(context -> assertThat(context).hasFailed());
 	}
 
