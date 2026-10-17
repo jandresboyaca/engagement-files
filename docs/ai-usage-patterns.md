@@ -3,8 +3,6 @@ title: AI Usage
 description: How AI assistants were used in this exercise, as patterns
 ---
 
-# AI usage in this exercise
-
 | Pattern | How it was applied |
 |---|---|
 | Spec-Driven Development (SDD) | specify → plan → tasks flow, with a project constitution. The spec states what and why; the result comes from a later step, after my approval. |
