@@ -274,10 +274,10 @@ insert sets the version (`JdbcAggregateTemplate`), which exception a version mis
 
 **Decision**: `adapter/in/scheduler` holds one trigger, `DispatchScheduler`, with a fixed delay.
 Its first tick runs `ResumeAfterRestartUseCase` and then `RunDispatchCycleUseCase`; every later tick
-runs only `RunDispatchCycleUseCase`. Work enters
-only through `SubmitWorkUseCase`; there is no endpoint and no broker. In this module the callers of
-`SubmitWorkUseCase`, `MarkDoneUseCase` and `GetWorkStatusUseCase` are the tests and the local seed
-script.
+runs only `RunDispatchCycleUseCase`. After every 60th cycle it also calls `GetWorkStatusUseCase` and
+logs one `status` line: that log line is the channel FR-016 asks for (added after review, I4).
+Work enters only through `SubmitWorkUseCase`; there is no endpoint and no broker. In this module
+the callers of `SubmitWorkUseCase` and `MarkDoneUseCase` are the tests and the local seed script.
 
 **Event listener as one more adapter**: in production the three triggers (firm activation, publish,
 sweep) and the result recorder would reach the worker as events. That is one more inbound adapter,

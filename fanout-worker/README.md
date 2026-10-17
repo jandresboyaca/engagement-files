@@ -51,7 +51,7 @@ The load API in `specs/002-fanout-worker/contracts/ems-load-api.yaml` is assumed
 
 - **One instance per region.** Two instances could count the same free slots and exceed C. Several instances would need claims with `FOR UPDATE SKIP LOCKED` or similar.
 - **No circuit breaker.** With backoff of 30, 60, 120, 240 and 480 s, an item that keeps failing fast for about 16 minutes is parked, so a long EMS outage parks every item first tried more than 16 minutes before EMS recovers. Production would pause dispatch while EMS is down.
-- **No metrics stack.** Events are log lines. `GetWorkStatusUseCase` returns counts, but nothing exposes it.
+- **No metrics stack.** Events are log lines. After every 60th cycle the scheduler logs one `status` line with counts per state and per firm, loads in flight and the oldest outstanding age (FR-016). Production would export these as metrics.
 - **No inbound API.** Only tests and the local seed create work. Production would add an event-listener adapter for the triggers.
 - **No operator requeue.** A parked item stays parked. Production would need a requeue action.
 

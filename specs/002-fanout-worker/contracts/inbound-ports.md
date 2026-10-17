@@ -91,3 +91,7 @@ record WorkStatus(
 its load still counts). `oldestOutstandingAge` is `now − addedAt` of the oldest
 `OUTSTANDING` item, empty if none. Parked items are visible here (FR-012). Firms appear by opaque
 id only.
+
+The channel for FR-016 is a log line: `DispatchScheduler` calls `status()` after every 60th
+cycle and logs one `status` line (counts per state and per firm, loads in flight, oldest
+outstanding age, opaque firm ids only).
